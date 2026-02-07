@@ -1,0 +1,220 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////////
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  STAFF
+  CUSTOMER
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  PAUSED
+  DELETED
+  EXPIRED
+  CANCELLED
+}
+
+//////////////////////////////////////////////////////
+// MODELS
+//////////////////////////////////////////////////////
+
+model Company {
+  id          BigInt   @id @default(autoincrement())
+  name        String
+  companyCode String   @unique
+  ownerName   String?
+  mobile      String?
+  address     String?
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+
+  users                User[]
+  products             Product[]
+  userProducts         UserProduct[]
+  dailyEntries         DailyEntry[]
+  userPayments         UserPayment[]
+  subscription         CompanySubscription?
+  subscriptionPayments CompanySubscriptionPayment[]
+
+  @@map("company")
+}
+
+//////////////////////////////////////////////////////
+
+model User {
+  id           BigInt   @id @default(autoincrement())
+  companyId    BigInt
+  name         String
+  mobile       String
+  email        String?  @unique
+  passwordHash String
+  role         UserRole
+  status       Status   @default(ACTIVE)
+  address      String?
+  createdAt    DateTime @default(now())
+
+  company         Company                      @relation(fields: [companyId], references: [id])
+  userProducts    UserProduct[]
+  dailyEntries    DailyEntry[]
+  payments        UserPayment[]
+  handledPayments CompanySubscriptionPayment[] @relation("HandledBy")
+
+  @@unique([companyId, mobile])
+  @@map("user")
+}
+
+//////////////////////////////////////////////////////
+
+model Product {
+  id          BigInt   @id @default(autoincrement())
+  companyId   BigInt
+  name        String
+  description String?
+  unit        String
+  price       Decimal  @db.Decimal(10, 2)
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  userProducts UserProduct[]
+  dailyEntries DailyEntry[]
+
+  @@unique([companyId, name])
+  @@map("product")
+}
+
+//////////////////////////////////////////////////////
+
+model UserProduct {
+  id          BigInt   @id @default(autoincrement())
+  companyId   BigInt
+  userId      BigInt
+  productId   BigInt
+  defaultQty  Decimal  @db.Decimal(10, 2)
+  customPrice Decimal? @db.Decimal(10, 2)
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([companyId, userId, productId])
+  @@map("user_product")
+}
+
+//////////////////////////////////////////////////////
+
+model DailyEntry {
+  id        BigInt   @id @default(autoincrement())
+  companyId BigInt
+  userId    BigInt
+  productId BigInt
+  entryDate DateTime @db.Date
+  quantity  Decimal  @db.Decimal(10, 2)
+  price     Decimal  @db.Decimal(10, 2)
+  amount    Decimal  @db.Decimal(10, 2)
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([companyId, userId, productId, entryDate])
+  @@map("daily_entry")
+}
+
+//////////////////////////////////////////////////////
+
+model UserPayment {
+  id          BigInt   @id @default(autoincrement())
+  companyId   BigInt
+  userId      BigInt
+  amount      Decimal  @db.Decimal(10, 2)
+  paymentDate DateTime @db.Date
+  paymentMode String
+  note        String?
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("user_payment")
+}
+
+//////////////////////////////////////////////////////
+
+model SubscriptionPlan {
+  id           BigInt   @id @default(autoincrement())
+  name         String
+  price        Decimal  @db.Decimal(10, 2)
+  durationDays Int
+  maxCustomers Int
+  maxAdmins    Int      @default(1)
+  description  String?
+  status       Status   @default(ACTIVE)
+  createdAt    DateTime @default(now())
+
+  subscriptions CompanySubscription[]
+  payments      CompanySubscriptionPayment[]
+
+  @@map("subscription_plan")
+}
+
+//////////////////////////////////////////////////////
+
+model CompanySubscription {
+  id        BigInt   @id @default(autoincrement())
+  companyId BigInt   @unique
+  planId    BigInt
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now())
+
+  company Company          @relation(fields: [companyId], references: [id])
+  plan    SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@map("company_subscription")
+}
+
+//////////////////////////////////////////////////////
+
+model CompanySubscriptionPayment {
+  id          BigInt   @id @default(autoincrement())
+  companyId   BigInt
+  planId      BigInt
+  amount      Decimal  @db.Decimal(10, 2)
+  paymentDate DateTime @db.Date
+  paymentMode String
+  reference   String?
+  handledById BigInt
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+
+  company   Company          @relation(fields: [companyId], references: [id])
+  plan      SubscriptionPlan @relation(fields: [planId], references: [id])
+  handledBy User             @relation("HandledBy", fields: [handledById], references: [id])
+
+  @@map("company_subscription_payment")
+}

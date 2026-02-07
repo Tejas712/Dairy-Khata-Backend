@@ -1,0 +1,67 @@
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
+import { LoginDto } from './dto/login.dto';
+import * as bcrypt from 'bcrypt';
+import { Status } from '@prisma/client';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
+
+  async login(loginDto: LoginDto) {
+    const company = await this.prisma.company.findUnique({
+      where: { companyCode: loginDto.companyCode },
+    });
+
+    if (!company || company.status !== Status.ACTIVE) {
+      throw new UnauthorizedException('Invalid company or company is inactive');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        companyId: company.id,
+        mobile: loginDto.mobile,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid mobile number or password');
+    }
+
+    if (user.status !== Status.ACTIVE) {
+      throw new ForbiddenException('User account is inactive');
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.passwordHash,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid mobile number or password');
+    }
+
+    const payload = {
+      sub: user.id.toString(),
+      companyId: user.companyId.toString(),
+      role: user.role,
+    };
+
+    return {
+      accessToken: this.jwtService.sign(payload),
+      user: {
+        id: user.id.toString(),
+        name: user.name,
+        role: user.role,
+        companyId: user.companyId.toString(),
+      },
+    };
+  }
+}
