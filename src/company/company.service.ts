@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  CreateCompanyDto,
   CreateCompanyWithAdminDto,
   UpdateCompanyDto,
   UpdateCompanyStatusDto,
@@ -113,5 +112,114 @@ export class CompanyService {
       where: { id },
       data: { status: updateStatusDto.status },
     });
+  }
+
+  async getOverview(id: bigint) {
+    const [userCount, productCount, subscription] = await Promise.all([
+      this.prisma.user.count({ where: { companyId: id } }),
+      this.prisma.product.count({ where: { companyId: id } }),
+      this.prisma.companySubscription.findUnique({
+        where: { companyId: id },
+        include: { plan: true },
+      }),
+    ]);
+
+    return {
+      userCount,
+      productCount,
+      subscription,
+    };
+  }
+
+  async getUsers(id: bigint) {
+    return this.prisma.user.findMany({
+      where: { companyId: id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        mobile: true,
+        role: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async getProducts(id: bigint) {
+    return this.prisma.product.findMany({
+      where: { companyId: id },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async getStats(companyId: bigint) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [
+      totalCustomers,
+      todayStats,
+      totalEntries,
+      totalPayments,
+      subscription,
+    ] = await Promise.all([
+      // 1. Total Customers
+      this.prisma.user.count({
+        where: { companyId, role: 'CUSTOMER', status: 'ACTIVE' },
+      }),
+
+      // 2. Today's Milk
+      this.prisma.dailyEntry.aggregate({
+        where: {
+          companyId,
+          entryDate: today,
+          status: 'ACTIVE',
+        },
+        _sum: {
+          quantity: true,
+        },
+      }),
+
+      // 3. Total Balance (Entries)
+      this.prisma.dailyEntry.aggregate({
+        where: { companyId, status: 'ACTIVE' },
+        _sum: {
+          amount: true,
+        },
+      }),
+
+      // 4. Total Payments
+      this.prisma.userPayment.aggregate({
+        where: { companyId, status: 'ACTIVE' },
+        _sum: {
+          amount: true,
+        },
+      }),
+
+      // 5. Subscription
+      this.prisma.companySubscription.findUnique({
+        where: { companyId },
+        include: { plan: true },
+      }),
+    ]);
+
+    const entrySum = totalEntries._sum.amount?.toNumber() || 0;
+    const paymentSum = totalPayments._sum.amount?.toNumber() || 0;
+    const outstandingBalance = entrySum - paymentSum;
+
+    let subscriptionDaysLeft = 0;
+    if (subscription && subscription.endDate) {
+      const diffTime = subscription.endDate.getTime() - new Date().getTime();
+      subscriptionDaysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    return {
+      totalCustomers,
+      todayMilk: todayStats._sum.quantity?.toNumber() || 0,
+      outstandingBalance,
+      subscriptionDaysLeft: Math.max(0, subscriptionDaysLeft),
+      subscription,
+    };
   }
 }

@@ -15,6 +15,7 @@ import { SubscriptionModule } from './subscription/subscription.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { SubscriptionGuard } from './auth/guards/subscription.guard';
+import { CompanyContextGuard } from './auth/guards/company-context.guard';
 import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
 
 @Module({
@@ -54,6 +55,10 @@ import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
     {
       provide: APP_GUARD,
       useClass: SubscriptionGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CompanyContextGuard,
     },
     {
       provide: APP_INTERCEPTOR,

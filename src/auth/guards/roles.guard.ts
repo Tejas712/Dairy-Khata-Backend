@@ -22,6 +22,11 @@ export class RolesGuard implements CanActivate {
     }
     const { user } = context.switchToHttp().getRequest();
 
+    // Super Admin bypasses all role checks
+    if (user?.role === UserRole.SUPER_ADMIN) {
+      return true;
+    }
+
     if (!user || !requiredRoles.some((role) => user.role === role)) {
       throw new ForbiddenException(
         'You do not have permission to access this resource',

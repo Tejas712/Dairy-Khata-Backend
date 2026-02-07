@@ -19,6 +19,9 @@ export const CurrentUser = createParamDecorator(
 export const CurrentCompanyId = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
+    if (request.companyContextId) {
+      return BigInt(request.companyContextId);
+    }
     return BigInt(request.user.companyId);
   },
 );

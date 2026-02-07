@@ -1,7 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
 import { CompanyService } from './company.service';
 import {
-  CreateCompanyDto,
   CreateCompanyWithAdminDto,
   UpdateCompanyDto,
   UpdateCompanyStatusDto,
@@ -42,5 +41,23 @@ export class CompanyController {
     @Body() updateStatusDto: UpdateCompanyStatusDto,
   ) {
     return this.companyService.updateStatus(BigInt(id), updateStatusDto);
+  }
+
+  @Get(':id/overview')
+  @ApiOperation({ summary: 'Get company overview (Super Admin)' })
+  getOverview(@Param('id') id: string) {
+    return this.companyService.getOverview(BigInt(id));
+  }
+
+  @Get(':id/users')
+  @ApiOperation({ summary: 'Get company users (Super Admin)' })
+  getUsers(@Param('id') id: string) {
+    return this.companyService.getUsers(BigInt(id));
+  }
+
+  @Get(':id/products')
+  @ApiOperation({ summary: 'Get company products (Super Admin)' })
+  getProducts(@Param('id') id: string) {
+    return this.companyService.getProducts(BigInt(id));
   }
 }
