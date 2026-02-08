@@ -78,4 +78,12 @@ export class ProductService {
       data: { status: updateStatusDto.status },
     });
   }
+
+  async remove(companyId: bigint, id: bigint) {
+    await this.findOne(companyId, id);
+    return this.prisma.product.update({
+      where: { id },
+      data: { status: Status.DELETED },
+    });
+  }
 }

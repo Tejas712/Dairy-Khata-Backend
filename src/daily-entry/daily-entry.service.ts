@@ -11,18 +11,25 @@ export class DailyEntryService {
     const userId = BigInt(dto.userId);
     const productId = BigInt(dto.productId);
 
-    // 1. Get custom price or product price
-    const userProduct = await this.prisma.userProduct.findFirst({
-      where: { companyId, userId, productId, status: Status.ACTIVE },
-      include: { product: true },
-    });
+    let price = dto.price;
 
-    if (!userProduct) {
-      throw new NotFoundException('Product assignment not found for this user');
+    if (price === undefined || price === null) {
+      // 1. Get custom price or product price if not provided in DTO
+      const userProduct = await this.prisma.userProduct.findFirst({
+        where: { companyId, userId, productId, status: Status.ACTIVE },
+        include: { product: true },
+      });
+
+      if (!userProduct) {
+        throw new NotFoundException(
+          'Product assignment not found for this user',
+        );
+      }
+
+      price = (userProduct.customPrice ?? userProduct.product.price).toNumber();
     }
 
-    const price = userProduct.customPrice ?? userProduct.product.price;
-    const amount = price.toNumber() * dto.quantity;
+    const amount = price * dto.quantity;
 
     // 2. Check if already exists for this date
     const entryDate = new Date(dto.entryDate);

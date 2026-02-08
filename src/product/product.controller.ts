@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Put,
+} from '@nestjs/common';
 import { ProductService } from './product.service';
 import {
   CreateProductDto,
@@ -38,6 +47,7 @@ export class ProductController {
   }
 
   @Patch(':id')
+  @Put(':id')
   @ApiOperation({ summary: 'Update product details' })
   update(
     @CurrentCompanyId() companyId: bigint,
@@ -59,5 +69,11 @@ export class ProductController {
       BigInt(id),
       updateStatusDto,
     );
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Soft delete a product' })
+  remove(@CurrentCompanyId() companyId: bigint, @Param('id') id: string) {
+    return this.productService.remove(companyId, BigInt(id));
   }
 }

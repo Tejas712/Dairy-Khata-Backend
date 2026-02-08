@@ -19,4 +19,9 @@ export class CreateDailyEntryDto {
   @IsNotEmpty()
   @IsNumber()
   quantity: number;
+
+  @ApiProperty({ example: 60.0 })
+  @IsNotEmpty()
+  @IsNumber()
+  price: number;
 }
