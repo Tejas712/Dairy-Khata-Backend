@@ -6,12 +6,15 @@ import {
   Patch,
   Param,
   Query,
+  Delete,
+  Put,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import {
   CreateUserDto,
   UpdateUserStatusDto,
   FindUsersDto,
+  UpdateUserDto,
 } from './dto/user.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Roles, CurrentCompanyId } from '../auth/decorators/auth.decorator';
@@ -60,5 +63,24 @@ export class UserController {
       BigInt(id),
       updateStatusDto,
     );
+  }
+
+  @Patch(':id')
+  @Put(':id')
+  @Roles(UserRole.OWNER)
+  @ApiOperation({ summary: 'Update user details' })
+  update(
+    @CurrentCompanyId() companyId: bigint,
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    return this.userService.update(companyId, BigInt(id), updateUserDto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.OWNER)
+  @ApiOperation({ summary: 'Soft delete user' })
+  remove(@CurrentCompanyId() companyId: bigint, @Param('id') id: string) {
+    return this.userService.remove(companyId, BigInt(id));
   }
 }

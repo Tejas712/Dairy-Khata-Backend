@@ -9,9 +9,10 @@ import {
   CreateUserDto,
   UpdateUserStatusDto,
   FindUsersDto,
+  UpdateUserDto,
 } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
-import { UserRole, Status, Prisma } from '@prisma/client';
+import { UserRole, Status, Prisma, User } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -185,5 +186,59 @@ export class UserService {
     const totalPayments = paymentsSum._sum.amount?.toNumber() ?? 0;
 
     return totalEntries - totalPayments;
+  }
+
+  async update(companyId: bigint, id: bigint, dto: UpdateUserDto) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, companyId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.mobile && dto.mobile !== user.mobile) {
+      const existing = await this.prisma.user.findFirst({
+        where: {
+          companyId,
+          mobile: dto.mobile,
+          id: { not: id },
+        },
+      });
+
+      if (existing) {
+        throw new ConflictException(
+          'User with this mobile number already exists in this company',
+        );
+      }
+    }
+
+    const { password, ...updateData } = dto;
+    const data: User = { ...user, ...updateData };
+
+    if (password) {
+      data.passwordHash = await bcrypt.hash(password, 10);
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async remove(companyId: bigint, id: bigint) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, companyId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Soft delete
+    return this.prisma.user.update({
+      where: { id },
+      data: { status: Status.DELETED },
+    });
   }
 }

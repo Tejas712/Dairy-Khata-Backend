@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  Put,
 } from '@nestjs/common';
 import { UserProductService } from './user-product.service';
 import { AssignProductDto, UpdateUserProductDto } from './dto/user-product.dto';
@@ -46,6 +47,7 @@ export class UserProductController {
   }
 
   @Patch(':id')
+  @Put(':id')
   @ApiOperation({ summary: 'Update assignment details' })
   update(
     @CurrentCompanyId() companyId: bigint,
