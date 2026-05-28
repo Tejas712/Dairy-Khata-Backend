@@ -33,10 +33,11 @@ export class UserPaymentController {
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Add a user payment' })
   create(
+    @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
     @Body() dto: CreateUserPaymentDto,
   ) {
-    return this.userPaymentService.create(companyId, dto);
+    return this.userPaymentService.create(companyId, dto, String(user.userId));
   }
 
   @Get()
@@ -63,7 +64,11 @@ export class UserPaymentController {
   @Delete(':id')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Delete a payment record' })
-  remove(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
-    return this.userPaymentService.remove(companyId, id);
+  remove(
+    @CurrentUser() user: any,
+    @CurrentCompanyId() companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.userPaymentService.remove(companyId, id, String(user.userId));
   }
 }

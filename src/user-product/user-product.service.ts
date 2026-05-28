@@ -10,7 +10,7 @@ import { AssignProductDto, UpdateUserProductDto } from './dto/user-product.dto';
 export class UserProductService {
   constructor(private prisma: PrismaService) {}
 
-  async assign(companyId: string, dto: AssignProductDto) {
+  async assign(companyId: string, dto: AssignProductDto, actorId: string) {
     const userId = dto.userId;
     const productId = dto.productId;
 
@@ -35,6 +35,8 @@ export class UserProductService {
         productId,
         defaultQty: dto.defaultQty,
         customPrice: dto.customPrice,
+        createdBy: actorId,
+        updatedBy: actorId,
       },
     });
   }
@@ -51,7 +53,12 @@ export class UserProductService {
     });
   }
 
-  async update(companyId: string, id: string, dto: UpdateUserProductDto) {
+  async update(
+    companyId: string,
+    id: string,
+    dto: UpdateUserProductDto,
+    actorId: string,
+  ) {
     const userProduct = await this.prisma.userProduct.findFirst({
       where: { id, companyId },
     });
@@ -65,11 +72,12 @@ export class UserProductService {
       data: {
         defaultQty: dto.defaultQty,
         customPrice: dto.customPrice,
+        updatedBy: actorId,
       },
     });
   }
 
-  async remove(companyId: string, id: string) {
+  async remove(companyId: string, id: string, actorId: string) {
     const userProduct = await this.prisma.userProduct.findFirst({
       where: { id, companyId },
     });
@@ -78,6 +86,7 @@ export class UserProductService {
       throw new NotFoundException('Assignment not found');
     }
 
+    void actorId;
     return this.prisma.userProduct.delete({
       where: { id },
     });

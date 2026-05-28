@@ -42,6 +42,9 @@ model Company {
   address     String?
   status      Status   @default(ACTIVE)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime? @updatedAt
+  createdBy   String?
+  updatedBy   String?
 
   users                User[]
   products             Product[]
@@ -68,6 +71,9 @@ model User {
   status       Status   @default(ACTIVE)
   address      String?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime? @updatedAt
+  createdBy    String?
+  updatedBy    String?
 
   company         Company                      @relation(fields: [companyId], references: [id])
   userProducts    UserProduct[]
@@ -92,6 +98,9 @@ model Product {
   price       Decimal  @db.Decimal(10, 2)
   status      Status   @default(ACTIVE)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime? @updatedAt
+  createdBy   String?
+  updatedBy   String?
 
   company      Company       @relation(fields: [companyId], references: [id])
   userProducts UserProduct[]
@@ -113,6 +122,9 @@ model UserProduct {
   customPrice Decimal? @db.Decimal(10, 2)
   status      Status   @default(ACTIVE)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime? @updatedAt
+  createdBy   String?
+  updatedBy   String?
 
   company Company @relation(fields: [companyId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
@@ -135,6 +147,9 @@ model DailyEntry {
   amount    Decimal  @db.Decimal(10, 2)
   status    Status   @default(ACTIVE)
   createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
+  createdBy String?
+  updatedBy String?
 
   company Company @relation(fields: [companyId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
@@ -156,6 +171,9 @@ model UserPayment {
   note        String?
   status      Status   @default(ACTIVE)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime? @updatedAt
+  createdBy   String?
+  updatedBy   String?
 
   company Company @relation(fields: [companyId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
@@ -175,6 +193,9 @@ model SubscriptionPlan {
   description  String?
   status       Status   @default(ACTIVE)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime? @updatedAt
+  createdBy    String?
+  updatedBy    String?
 
   subscriptions CompanySubscription[]
   payments      CompanySubscriptionPayment[]
@@ -192,6 +213,9 @@ model CompanySubscription {
   endDate   DateTime @db.Date
   status    Status   @default(ACTIVE)
   createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
+  createdBy String?
+  updatedBy String?
 
   company Company          @relation(fields: [companyId], references: [id])
   plan    SubscriptionPlan @relation(fields: [planId], references: [id])
@@ -212,6 +236,9 @@ model CompanySubscriptionPayment {
   handledById String
   status      Status   @default(ACTIVE)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime? @updatedAt
+  createdBy   String?
+  updatedBy   String?
 
   company   Company          @relation(fields: [companyId], references: [id])
   plan      SubscriptionPlan @relation(fields: [planId], references: [id])

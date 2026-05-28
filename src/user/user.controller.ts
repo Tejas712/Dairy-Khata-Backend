@@ -17,7 +17,11 @@ import {
   UpdateUserDto,
 } from './dto/user.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Roles, CurrentCompanyId } from '../auth/decorators/auth.decorator';
+import {
+  Roles,
+  CurrentCompanyId,
+  CurrentUser,
+} from '../auth/decorators/auth.decorator';
 import { UserRole } from '@prisma/client';
 
 @ApiTags('users')
@@ -30,10 +34,11 @@ export class UserController {
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Create a new user (STAFF/CUSTOMER)' })
   create(
+    @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
     @Body() createUserDto: CreateUserDto,
   ) {
-    return this.userService.create(companyId, createUserDto);
+    return this.userService.create(companyId, createUserDto, String(user.userId));
   }
 
   @Get()
@@ -54,11 +59,17 @@ export class UserController {
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Update user status' })
   updateStatus(
+    @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateUserStatusDto,
   ) {
-    return this.userService.updateStatus(companyId, id, updateStatusDto);
+    return this.userService.updateStatus(
+      companyId,
+      id,
+      updateStatusDto,
+      String(user.userId),
+    );
   }
 
   @Patch(':id')
@@ -66,17 +77,27 @@ export class UserController {
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Update user details' })
   update(
+    @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    return this.userService.update(companyId, id, updateUserDto);
+    return this.userService.update(
+      companyId,
+      id,
+      updateUserDto,
+      String(user.userId),
+    );
   }
 
   @Delete(':id')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Soft delete user' })
-  remove(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
-    return this.userService.remove(companyId, id);
+  remove(
+    @CurrentUser() user: any,
+    @CurrentCompanyId() companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.userService.remove(companyId, id, String(user.userId));
   }
 }

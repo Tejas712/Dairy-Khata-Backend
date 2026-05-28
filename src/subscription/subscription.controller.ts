@@ -18,8 +18,8 @@ export class SubscriptionController {
   @Post('plans')
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create a new subscription plan' })
-  createPlan(@Body() dto: CreatePlanDto) {
-    return this.subscriptionService.createPlan(dto);
+  createPlan(@CurrentUser() user: any, @Body() dto: CreatePlanDto) {
+    return this.subscriptionService.createPlan(dto, String(user.userId));
   }
 
   @Get('plans')
@@ -32,8 +32,8 @@ export class SubscriptionController {
   @Post('assign')
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Assign a plan to a company' })
-  assignPlan(@Body() dto: AssignPlanDto) {
-    return this.subscriptionService.assignPlan(dto);
+  assignPlan(@CurrentUser() user: any, @Body() dto: AssignPlanDto) {
+    return this.subscriptionService.assignPlan(dto, String(user.userId));
   }
 
   @Post('payments')

@@ -7,7 +7,7 @@ import { Status } from '@prisma/client';
 export class UserPaymentService {
   constructor(private prisma: PrismaService) {}
 
-  async create(companyId: string, dto: CreateUserPaymentDto) {
+  async create(companyId: string, dto: CreateUserPaymentDto, actorId: string) {
     return this.prisma.userPayment.create({
       data: {
         companyId,
@@ -16,6 +16,8 @@ export class UserPaymentService {
         paymentDate: new Date(dto.paymentDate),
         paymentMode: dto.paymentMode,
         note: dto.note,
+        createdBy: actorId,
+        updatedBy: actorId,
       },
     });
   }
@@ -36,7 +38,7 @@ export class UserPaymentService {
     });
   }
 
-  async remove(companyId: string, id: string) {
+  async remove(companyId: string, id: string, actorId: string) {
     const payment = await this.prisma.userPayment.findFirst({
       where: { id, companyId },
     });
@@ -45,6 +47,7 @@ export class UserPaymentService {
       throw new NotFoundException('Payment record not found');
     }
 
+    void actorId;
     return this.prisma.userPayment.delete({
       where: { id },
     });

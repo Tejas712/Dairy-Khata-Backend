@@ -6,7 +6,7 @@ import {
   UpdateCompanyStatusDto,
 } from './dto/company.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Roles } from '../auth/decorators/auth.decorator';
+import { Roles, CurrentUser } from '../auth/decorators/auth.decorator';
 import { UserRole } from '@prisma/client';
 
 @ApiTags('companies')
@@ -18,8 +18,8 @@ export class CompanyController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new company with an admin' })
-  create(@Body() dto: CreateCompanyWithAdminDto) {
-    return this.companyService.create(dto);
+  create(@CurrentUser() user: any, @Body() dto: CreateCompanyWithAdminDto) {
+    return this.companyService.create(dto, String(user.userId));
   }
 
   @Get()
@@ -30,17 +30,22 @@ export class CompanyController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update company details' })
-  update(@Param('id') id: string, @Body() updateCompanyDto: UpdateCompanyDto) {
-    return this.companyService.update(id, updateCompanyDto);
+  update(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() updateCompanyDto: UpdateCompanyDto,
+  ) {
+    return this.companyService.update(id, updateCompanyDto, String(user.userId));
   }
 
   @Patch(':id/status')
   @ApiOperation({ summary: 'Update company status' })
   updateStatus(
+    @CurrentUser() user: any,
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateCompanyStatusDto,
   ) {
-    return this.companyService.updateStatus(id, updateStatusDto);
+    return this.companyService.updateStatus(id, updateStatusDto, String(user.userId));
   }
 
   @Get(':id/overview')

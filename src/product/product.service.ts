@@ -15,7 +15,11 @@ import { Status } from '@prisma/client';
 export class ProductService {
   constructor(private prisma: PrismaService) {}
 
-  async create(companyId: string, createProductDto: CreateProductDto) {
+  async create(
+    companyId: string,
+    createProductDto: CreateProductDto,
+    actorId: string,
+  ) {
     const existing = await this.prisma.product.findFirst({
       where: {
         companyId,
@@ -48,6 +52,8 @@ export class ProductService {
         ...createProductDto,
         companyId,
         price: createProductDto.price,
+        createdBy: actorId,
+        updatedBy: actorId,
       },
     });
   }
@@ -73,6 +79,7 @@ export class ProductService {
     companyId: string,
     id: string,
     updateProductDto: UpdateProductDto,
+    actorId: string,
   ) {
     await this.findOne(companyId, id);
 
@@ -95,7 +102,10 @@ export class ProductService {
 
     return this.prisma.product.update({
       where: { id },
-      data: updateProductDto,
+      data: {
+        ...updateProductDto,
+        updatedBy: actorId,
+      },
     });
   }
 
@@ -103,19 +113,20 @@ export class ProductService {
     companyId: string,
     id: string,
     updateStatusDto: UpdateProductStatusDto,
+    actorId: string,
   ) {
     await this.findOne(companyId, id);
     return this.prisma.product.update({
       where: { id },
-      data: { status: updateStatusDto.status },
+      data: { status: updateStatusDto.status, updatedBy: actorId },
     });
   }
 
-  async remove(companyId: string, id: string) {
+  async remove(companyId: string, id: string, actorId: string) {
     await this.findOne(companyId, id);
     return this.prisma.product.update({
       where: { id },
-      data: { status: Status.DELETED },
+      data: { status: Status.DELETED, updatedBy: actorId },
     });
   }
 }

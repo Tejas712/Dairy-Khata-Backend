@@ -15,7 +15,11 @@ import {
   UpdateProductStatusDto,
 } from './dto/product.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Roles, CurrentCompanyId } from '../auth/decorators/auth.decorator';
+import {
+  Roles,
+  CurrentCompanyId,
+  CurrentUser,
+} from '../auth/decorators/auth.decorator';
 import { UserRole } from '@prisma/client';
 
 @ApiTags('products')
@@ -28,10 +32,15 @@ export class ProductController {
   @Post()
   @ApiOperation({ summary: 'Create a new product' })
   create(
+    @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
     @Body() createProductDto: CreateProductDto,
   ) {
-    return this.productService.create(companyId, createProductDto);
+    return this.productService.create(
+      companyId,
+      createProductDto,
+      String(user.userId),
+    );
   }
 
   @Get()
@@ -50,26 +59,42 @@ export class ProductController {
   @Put(':id')
   @ApiOperation({ summary: 'Update product details' })
   update(
+    @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
   ) {
-    return this.productService.update(companyId, id, updateProductDto);
+    return this.productService.update(
+      companyId,
+      id,
+      updateProductDto,
+      String(user.userId),
+    );
   }
 
   @Patch(':id/status')
   @ApiOperation({ summary: 'Update product status' })
   updateStatus(
+    @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateProductStatusDto,
   ) {
-    return this.productService.updateStatus(companyId, id, updateStatusDto);
+    return this.productService.updateStatus(
+      companyId,
+      id,
+      updateStatusDto,
+      String(user.userId),
+    );
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Soft delete a product' })
-  remove(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
-    return this.productService.remove(companyId, id);
+  remove(
+    @CurrentUser() user: any,
+    @CurrentCompanyId() companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.productService.remove(companyId, id, String(user.userId));
   }
 }

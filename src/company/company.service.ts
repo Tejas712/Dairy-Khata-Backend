@@ -16,7 +16,7 @@ import * as bcrypt from 'bcrypt';
 export class CompanyService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateCompanyWithAdminDto) {
+  async create(dto: CreateCompanyWithAdminDto, actorId: string) {
     const existing = await this.prisma.company.findUnique({
       where: { companyCode: dto.company.companyCode },
     });
@@ -27,13 +27,18 @@ export class CompanyService {
     return this.prisma.$transaction(async (tx) => {
       // 1. Create Company
       const company = await tx.company.create({
-        data: dto.company,
+        data: {
+          ...dto.company,
+          createdBy: actorId,
+          updatedBy: actorId,
+        },
       });
 
       // 2. Assign subscription plan
       const plan = await this.resolveSubscriptionPlan(
         tx,
         dto.subscription?.planId,
+        actorId,
       );
       const startDate = dto.subscription?.startDate
         ? new Date(dto.subscription.startDate)
@@ -48,6 +53,8 @@ export class CompanyService {
           startDate,
           endDate,
           status: 'ACTIVE',
+          createdBy: actorId,
+          updatedBy: actorId,
         },
       });
 
@@ -62,6 +69,8 @@ export class CompanyService {
           role: 'OWNER',
           companyId: company.id,
           status: 'ACTIVE',
+          createdBy: actorId,
+          updatedBy: actorId,
         },
       });
 
@@ -73,6 +82,7 @@ export class CompanyService {
   private async resolveSubscriptionPlan(
     tx: Prisma.TransactionClient,
     planId?: string,
+    actorId?: string,
   ) {
     if (planId) {
       const plan = await tx.subscriptionPlan.findUnique({
@@ -98,6 +108,8 @@ export class CompanyService {
           maxAdmins: 1,
           status: 'ACTIVE',
           description: 'Default Free Plan',
+          createdBy: actorId ?? 'SYSTEM',
+          updatedBy: actorId ?? 'SYSTEM',
         },
       });
     }
@@ -121,19 +133,26 @@ export class CompanyService {
     return company;
   }
 
-  async update(id: string, updateCompanyDto: UpdateCompanyDto) {
+  async update(id: string, updateCompanyDto: UpdateCompanyDto, actorId: string) {
     await this.findOne(id);
     return this.prisma.company.update({
       where: { id },
-      data: updateCompanyDto,
+      data: {
+        ...updateCompanyDto,
+        updatedBy: actorId,
+      },
     });
   }
 
-  async updateStatus(id: string, updateStatusDto: UpdateCompanyStatusDto) {
+  async updateStatus(
+    id: string,
+    updateStatusDto: UpdateCompanyStatusDto,
+    actorId: string,
+  ) {
     await this.findOne(id);
     return this.prisma.company.update({
       where: { id },
-      data: { status: updateStatusDto.status },
+      data: { status: updateStatusDto.status, updatedBy: actorId },
     });
   }
 

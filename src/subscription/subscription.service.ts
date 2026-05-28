@@ -12,9 +12,13 @@ export class SubscriptionService {
   constructor(private prisma: PrismaService) {}
 
   // Plans
-  async createPlan(dto: CreatePlanDto) {
+  async createPlan(dto: CreatePlanDto, actorId: string) {
     return this.prisma.subscriptionPlan.create({
-      data: dto,
+      data: {
+        ...dto,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
     });
   }
 
@@ -25,7 +29,7 @@ export class SubscriptionService {
   }
 
   // Company Subscriptions
-  async assignPlan(dto: AssignPlanDto) {
+  async assignPlan(dto: AssignPlanDto, actorId: string) {
     const plan = await this.prisma.subscriptionPlan.findUnique({
       where: { id: dto.planId },
     });
@@ -42,6 +46,7 @@ export class SubscriptionService {
         startDate,
         endDate,
         status: Status.ACTIVE,
+        updatedBy: actorId,
       },
       create: {
         companyId: dto.companyId,
@@ -49,6 +54,8 @@ export class SubscriptionService {
         startDate,
         endDate,
         status: Status.ACTIVE,
+        createdBy: actorId,
+        updatedBy: actorId,
       },
     });
   }
@@ -64,6 +71,8 @@ export class SubscriptionService {
         paymentMode: dto.paymentMode,
         reference: dto.reference,
         handledById: adminId,
+        createdBy: adminId,
+        updatedBy: adminId,
       },
     });
   }

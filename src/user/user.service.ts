@@ -18,7 +18,7 @@ import { UserRole, Status, Prisma, User } from '@prisma/client';
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async create(companyId: string, createUserDto: CreateUserDto) {
+  async create(companyId: string, createUserDto: CreateUserDto, actorId: string) {
     const existing = await this.prisma.user.findFirst({
       where: {
         companyId,
@@ -100,6 +100,8 @@ export class UserService {
         ...userData,
         companyId,
         passwordHash,
+        createdBy: actorId,
+        updatedBy: actorId,
       },
     });
   }
@@ -159,6 +161,7 @@ export class UserService {
     companyId: string,
     id: string,
     updateStatusDto: UpdateUserStatusDto,
+    actorId: string,
   ) {
     const user = await this.prisma.user.findFirst({
       where: { id, companyId },
@@ -186,7 +189,7 @@ export class UserService {
 
     return this.prisma.user.update({
       where: { id },
-      data: { status: updateStatusDto.status },
+      data: { status: updateStatusDto.status, updatedBy: actorId },
     });
   }
 
@@ -207,7 +210,7 @@ export class UserService {
     return totalEntries - totalPayments;
   }
 
-  async update(companyId: string, id: string, dto: UpdateUserDto) {
+  async update(companyId: string, id: string, dto: UpdateUserDto, actorId: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, companyId },
     });
@@ -257,11 +260,14 @@ export class UserService {
 
     return this.prisma.user.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        updatedBy: actorId,
+      },
     });
   }
 
-  async remove(companyId: string, id: string) {
+  async remove(companyId: string, id: string, actorId: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, companyId },
     });
@@ -273,7 +279,7 @@ export class UserService {
     // Soft delete
     return this.prisma.user.update({
       where: { id },
-      data: { status: Status.DELETED },
+      data: { status: Status.DELETED, updatedBy: actorId },
     });
   }
 }

@@ -170,7 +170,7 @@ export class WhatsAppService {
         quantity: assignedProduct.defaultQty.toNumber(),
         price: product.price.toNumber(),
         entryDate: new Date().toISOString().split('T')[0],
-      });
+      }, owner.id);
       console.log('dailyEntry', JSON.stringify(dailyEntry, null, 2));
 
       // Send confirmation message

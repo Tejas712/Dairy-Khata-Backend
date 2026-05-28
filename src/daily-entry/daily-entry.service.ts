@@ -7,7 +7,7 @@ import { Status } from '@prisma/client';
 export class DailyEntryService {
   constructor(private prisma: PrismaService) {}
 
-  async create(companyId: string, dto: CreateDailyEntryDto) {
+  async create(companyId: string, dto: CreateDailyEntryDto, actorId: string) {
     const userId = dto.userId;
     const productId = dto.productId;
 
@@ -49,6 +49,7 @@ export class DailyEntryService {
           quantity: dto.quantity,
           amount,
           price,
+          updatedBy: actorId,
         },
       });
     }
@@ -62,6 +63,8 @@ export class DailyEntryService {
         quantity: dto.quantity,
         price,
         amount,
+        createdBy: actorId,
+        updatedBy: actorId,
       },
     });
   }
@@ -92,7 +95,7 @@ export class DailyEntryService {
     });
   }
 
-  async remove(companyId: string, id: string) {
+  async remove(companyId: string, id: string, actorId: string) {
     const entry = await this.prisma.dailyEntry.findFirst({
       where: { id, companyId },
     });
@@ -101,6 +104,7 @@ export class DailyEntryService {
       throw new NotFoundException('Entry not found');
     }
 
+    void actorId;
     return this.prisma.dailyEntry.delete({
       where: { id },
     });

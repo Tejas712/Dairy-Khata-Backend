@@ -33,10 +33,11 @@ export class DailyEntryController {
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiOperation({ summary: 'Add or update a daily entry' })
   create(
+    @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
     @Body() dto: CreateDailyEntryDto,
   ) {
-    return this.dailyEntryService.create(companyId, dto);
+    return this.dailyEntryService.create(companyId, dto, String(user.userId));
   }
 
   @Get()
@@ -77,7 +78,11 @@ export class DailyEntryController {
   @Delete(':id')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Delete a daily entry' })
-  remove(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
-    return this.dailyEntryService.remove(companyId, id);
+  remove(
+    @CurrentUser() user: any,
+    @CurrentCompanyId() companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.dailyEntryService.remove(companyId, id, String(user.userId));
   }
 }

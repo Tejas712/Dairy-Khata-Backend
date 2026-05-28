@@ -17,7 +17,11 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { Roles, CurrentCompanyId } from '../auth/decorators/auth.decorator';
+import {
+  Roles,
+  CurrentCompanyId,
+  CurrentUser,
+} from '../auth/decorators/auth.decorator';
 import { UserRole } from '@prisma/client';
 
 @ApiTags('user-products')
@@ -29,8 +33,12 @@ export class UserProductController {
 
   @Post()
   @ApiOperation({ summary: 'Assign a product to a customer' })
-  assign(@CurrentCompanyId() companyId: string, @Body() dto: AssignProductDto) {
-    return this.userProductService.assign(companyId, dto);
+  assign(
+    @CurrentUser() user: any,
+    @CurrentCompanyId() companyId: string,
+    @Body() dto: AssignProductDto,
+  ) {
+    return this.userProductService.assign(companyId, dto, String(user.userId));
   }
 
   @Get()
@@ -50,16 +58,21 @@ export class UserProductController {
   @Put(':id')
   @ApiOperation({ summary: 'Update assignment details' })
   update(
+    @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
     @Param('id') id: string,
     @Body() dto: UpdateUserProductDto,
   ) {
-    return this.userProductService.update(companyId, id, dto);
+    return this.userProductService.update(companyId, id, dto, String(user.userId));
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Remove product assignment' })
-  remove(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
-    return this.userProductService.remove(companyId, id);
+  remove(
+    @CurrentUser() user: any,
+    @CurrentCompanyId() companyId: string,
+    @Param('id') id: string,
+  ) {
+    return this.userProductService.remove(companyId, id, String(user.userId));
   }
 }
