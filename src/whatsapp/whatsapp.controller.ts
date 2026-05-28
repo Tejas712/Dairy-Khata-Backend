@@ -9,9 +9,19 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
-import { Public } from '../auth/decorators/auth.decorator';
+import {
+  CurrentCompanyId,
+  CurrentUser,
+  Public,
+  Roles,
+} from '../auth/decorators/auth.decorator';
 import { WhatsAppService } from './whatsapp.service';
 import { WhatsAppWebhookPayload } from './dto/whatsapp-webhook.dto';
+import {
+  ChatbotMessageDto,
+  ChatbotMessageResponseDto,
+} from './dto/chatbot.dto';
+import { UserRole } from '@prisma/client';
 
 @ApiTags('whatsapp')
 @Controller('whatsapp')
@@ -46,8 +56,25 @@ export class WhatsAppController {
     @Body() body: WhatsAppWebhookPayload,
     @Res() res: Response,
   ) {
-    console.log('body', body);
     await this.whatsappService.handleWebhookPayload(body);
     return res.status(HttpStatus.OK).send('EVENT_RECEIVED');
+  }
+
+  @Post('chatbot')
+  @Roles(UserRole.OWNER, UserRole.STAFF, UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Process WhatsApp-like command from in-app chatbot (customerCode productCode)',
+  })
+  async chatbot(
+    @CurrentUser() user: any,
+    @CurrentCompanyId() companyId: string,
+    @Body() body: ChatbotMessageDto,
+  ): Promise<ChatbotMessageResponseDto> {
+    return this.whatsappService.processChatbotMessage(
+      String(user.userId),
+      String(companyId),
+      body.message,
+    );
   }
 }

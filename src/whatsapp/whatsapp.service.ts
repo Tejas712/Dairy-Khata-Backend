@@ -7,6 +7,7 @@ import {
   WhatsAppWebhookPayload,
 } from './dto/whatsapp-webhook.dto';
 import { Status, UserRole } from '@prisma/client';
+import { ChatbotMessageResponseDto } from './dto/chatbot.dto';
 
 @Injectable()
 export class WhatsAppService {
@@ -70,7 +71,6 @@ export class WhatsAppService {
     }
 
     try {
-      // 1. Find owner
       const owner = await this.prisma.user.findFirst({
         where: {
           status: 'ACTIVE',
@@ -79,7 +79,6 @@ export class WhatsAppService {
         },
       });
       if (!owner) {
-        // If not registered/unauthorized owner/staff, ignore to save cost and avoid spamming
         this.logger.warn(
           `Ignored message from unauthorized owner: ${cleanedFrom}`,
         );
@@ -90,99 +89,136 @@ export class WhatsAppService {
         return;
       }
 
-      const companyId = owner.companyId;
-      console.log('companyId', companyId);
-
-      // Split message into three parts: customerCode, productCode, quantity
-      const [customerCode, productCode] = messageBody.split(' ');
-      console.log('customerCode', customerCode);
-      console.log('productCode', productCode);
-      if (!customerCode || !productCode) {
-        this.logger.warn(`Invalid format. Use: customerCode productCode`);
-        await this.sendTextMessage(
-          from,
-          '❌ Invalid format. Use: customerCode productCode',
-        );
-        return;
-      }
-
-      // Find Customer
-      const customer = await this.prisma.user.findFirst({
-        where: {
-          companyId,
-          customerCode,
-          role: UserRole.CUSTOMER,
-          status: Status.ACTIVE,
-        },
-      });
-      console.log('customer', JSON.stringify(customer, null, 2));
-      if (!customer) {
-        this.logger.warn(`Customer not found: ${customerCode}`);
-        await this.sendTextMessage(
-          from,
-          `❌ Customer not found: ${customerCode}`,
-        );
-        return;
-      }
-
-      // Find Product
-      const product = await this.prisma.product.findFirst({
-        where: {
-          companyId,
-          productCode,
-          status: Status.ACTIVE,
-        },
-      });
-      console.log('product', JSON.stringify(product, null, 2));
-      if (!product) {
-        this.logger.warn(`Product not found: ${productCode}`);
-        await this.sendTextMessage(
-          from,
-          `❌ Product not found: ${productCode}`,
-        );
-        return;
-      }
-
-      // Find assigned product for this customer
-      const assignedProduct = await this.prisma.userProduct.findFirst({
-        where: {
-          companyId,
-          userId: customer.id,
-          productId: product.id,
-        },
-      });
-      console.log('assignedProduct', JSON.stringify(assignedProduct, null, 2));
-      if (!assignedProduct) {
-        this.logger.warn(
-          `Product not assigned to this customer: ${productCode}`,
-        );
-        await this.sendTextMessage(
-          from,
-          `❌ Product not assigned to this customer: ${productCode}`,
-        );
-        return;
-      }
-
-      // Create daily entry
-      const dailyEntry = await this.dailyEntryService.create(companyId, {
-        userId: customer.id,
-        productId: product.id,
-        quantity: assignedProduct.defaultQty.toNumber(),
-        price: product.price.toNumber(),
-        entryDate: new Date().toISOString().split('T')[0],
-      }, owner.id);
-      console.log('dailyEntry', JSON.stringify(dailyEntry, null, 2));
-
-      // Send confirmation message
-      await this.sendTextMessage(
-        from,
-        `✅ Daily entry created successfully for ${customer.name} - ${product.name} - ${assignedProduct.defaultQty.toNumber()}`,
-      );
+      const result = await this.runEntryCommand(owner.id, owner.companyId, messageBody);
+      await this.sendTextMessage(from, result.message);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to process webhook';
       this.logger.error(`Webhook processing failed: ${errorMessage}`);
     }
+  }
+
+  async processChatbotMessage(
+    actorId: string,
+    companyId: string,
+    messageBody: string,
+  ): Promise<ChatbotMessageResponseDto> {
+    const owner = await this.resolveOwnerFromToken(actorId, companyId);
+    if (!owner) {
+      return {
+        success: false,
+        message: '❌ You are not authorized to create entries from chatbot.',
+      };
+    }
+
+    return this.runEntryCommand(owner.id, owner.companyId, messageBody);
+  }
+
+  private async resolveOwnerFromToken(actorId: string, companyId: string) {
+    const actor = await this.prisma.user.findUnique({
+      where: { id: actorId },
+      select: { id: true, role: true, companyId: true, status: true },
+    });
+
+    if (!actor || actor.status !== Status.ACTIVE) {
+      return null;
+    }
+
+    if (actor.role === UserRole.OWNER && actor.companyId === companyId) {
+      return await this.prisma.user.findUnique({
+        where: { id: actor.id },
+      });
+    }
+
+    if (actor.role === UserRole.STAFF || actor.role === UserRole.SUPER_ADMIN) {
+      return this.prisma.user.findFirst({
+        where: {
+          companyId,
+          role: UserRole.OWNER,
+          status: Status.ACTIVE,
+        },
+      });
+    }
+
+    return null;
+  }
+
+  private async runEntryCommand(
+    ownerId: string,
+    companyId: string,
+    messageBody: string,
+  ): Promise<ChatbotMessageResponseDto> {
+    const [customerCode, productCode] = messageBody.trim().split(/\s+/);
+    if (!customerCode || !productCode) {
+      this.logger.warn(`Invalid format. Use: customerCode productCode`);
+      return {
+        success: false,
+        message: '❌ Invalid format. Use: customerCode productCode',
+      };
+    }
+
+    const customer = await this.prisma.user.findFirst({
+      where: {
+        companyId,
+        customerCode,
+        role: UserRole.CUSTOMER,
+        status: Status.ACTIVE,
+      },
+    });
+    if (!customer) {
+      this.logger.warn(`Customer not found: ${customerCode}`);
+      return {
+        success: false,
+        message: `❌ Customer not found: ${customerCode}`,
+      };
+    }
+
+    const product = await this.prisma.product.findFirst({
+      where: {
+        companyId,
+        productCode,
+        status: Status.ACTIVE,
+      },
+    });
+    if (!product) {
+      this.logger.warn(`Product not found: ${productCode}`);
+      return {
+        success: false,
+        message: `❌ Product not found: ${productCode}`,
+      };
+    }
+
+    const assignedProduct = await this.prisma.userProduct.findFirst({
+      where: {
+        companyId,
+        userId: customer.id,
+        productId: product.id,
+      },
+    });
+    if (!assignedProduct) {
+      this.logger.warn(`Product not assigned to this customer: ${productCode}`);
+      return {
+        success: false,
+        message: `❌ Product not assigned to this customer: ${productCode}`,
+      };
+    }
+
+    await this.dailyEntryService.create(
+      companyId,
+      {
+        userId: customer.id,
+        productId: product.id,
+        quantity: assignedProduct.defaultQty.toNumber(),
+        price: product.price.toNumber(),
+        entryDate: new Date().toISOString().split('T')[0],
+      },
+      ownerId,
+    );
+
+    return {
+      success: true,
+      message: `✅ Daily entry created successfully for ${customer.name} - ${product.name} - ${assignedProduct.defaultQty.toNumber()}`,
+    };
   }
 
   private async sendTextMessage(to: string, text: string): Promise<void> {

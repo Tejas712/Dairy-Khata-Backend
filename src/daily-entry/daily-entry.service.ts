@@ -33,26 +33,26 @@ export class DailyEntryService {
 
     // 2. Check if already exists for this date
     const entryDate = new Date(dto.entryDate);
-    const existing = await this.prisma.dailyEntry.findFirst({
-      where: {
-        companyId,
-        userId,
-        productId,
-        entryDate,
-      },
-    });
+    // const existing = await this.prisma.dailyEntry.findFirst({
+    //   where: {
+    //     companyId,
+    //     userId,
+    //     productId,
+    //     entryDate,
+    //   },
+    // });
 
-    if (existing) {
-      return this.prisma.dailyEntry.update({
-        where: { id: existing.id },
-        data: {
-          quantity: dto.quantity,
-          amount,
-          price,
-          updatedBy: actorId,
-        },
-      });
-    }
+    // if (existing) {
+    //   return this.prisma.dailyEntry.update({
+    //     where: { id: existing.id },
+    //     data: {
+    //       quantity: dto.quantity,
+    //       amount,
+    //       price,
+    //       updatedBy: actorId,
+    //     },
+    //   });
+    // }
 
     return this.prisma.dailyEntry.create({
       data: {
