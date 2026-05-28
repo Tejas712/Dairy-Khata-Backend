@@ -42,15 +42,19 @@ export class UserProductController {
   }
 
   @Get()
+  @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiOperation({ summary: 'List all product assignments' })
   @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'search', required: false })
   findAll(
     @CurrentCompanyId() companyId: string,
     @Query('userId') userId?: string,
+    @Query('search') search?: string,
   ) {
     return this.userProductService.findAll(
       companyId,
       userId || undefined,
+      search || undefined,
     );
   }
 

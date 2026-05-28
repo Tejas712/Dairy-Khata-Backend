@@ -41,16 +41,43 @@ export class UserProductService {
     });
   }
 
-  async findAll(companyId: string, userId?: string) {
-    return this.prisma.userProduct.findMany({
+  async findAll(companyId: string, userId?: string, search?: string) {
+    const normalizedSearch = search?.trim().toLowerCase();
+
+    const assignments = await this.prisma.userProduct.findMany({
       where: {
         companyId,
         userId: userId ? userId : undefined,
+        status: 'ACTIVE',
+        user: {
+          status: 'ACTIVE',
+          ...(normalizedSearch
+            ? {
+                name: {
+                  contains: normalizedSearch,
+                  mode: 'insensitive',
+                },
+              }
+            : {}),
+        },
+        product: {
+          status: 'ACTIVE',
+        },
       },
       include: {
         product: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            customerCode: true,
+          },
+        },
       },
+      orderBy: [{ user: { name: 'asc' } }, { product: { name: 'asc' } }],
     });
+
+    return assignments;
   }
 
   async update(
