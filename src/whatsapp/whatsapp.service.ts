@@ -2,23 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { DailyEntryService } from '../daily-entry/daily-entry.service';
-
-export interface WhatsAppWebhookLog {
-  id: string;
-  receivedAt: string;
-  from: string;
-  messageId?: string;
-  messageType: string;
-  messageBody?: string;
-  replySent: boolean;
-  replyError?: string;
-}
+import {
+  WhatsAppWebhookMessage,
+  WhatsAppWebhookPayload,
+} from './dto/whatsapp-webhook.dto';
+import { Status, UserRole } from '@prisma/client';
 
 @Injectable()
 export class WhatsAppService {
   private readonly logger = new Logger(WhatsAppService.name);
-  private readonly webhookLogs: WhatsAppWebhookLog[] = [];
-  private readonly maxLogs = 100;
 
   constructor(
     private readonly config: ConfigService,
@@ -34,219 +26,162 @@ export class WhatsAppService {
     return null;
   }
 
-  listWebhooks(): WhatsAppWebhookLog[] {
-    return [...this.webhookLogs].reverse();
-  }
-
-  getTestStatus() {
-    return {
-      service: 'DairyKhata WhatsApp',
-      replyMessage: 'DairyKhata',
-      configured: {
-        verifyToken: !!this.config.get('WHATSAPP_VERIFY_TOKEN'),
-        accessToken: !!this.config.get('WHATSAPP_ACCESS_TOKEN'),
-        phoneNumberId: !!this.config.get('WHATSAPP_PHONE_NUMBER_ID'),
-      },
-      webhookCount: this.webhookLogs.length,
-      webhookUrl: '/api/whatsapp/webhook',
-    };
-  }
-
-  async handleWebhookPayload(body: Record<string, unknown>): Promise<void> {
+  async handleWebhookPayload(body: WhatsAppWebhookPayload): Promise<void> {
     if (body.object !== 'whatsapp_business_account') {
       return;
     }
+    console.log('body', JSON.stringify(body, null, 2));
 
-    const entries = (body.entry as Record<string, unknown>[]) ?? [];
-    for (const entry of entries) {
-      const changes = (entry.changes as Record<string, unknown>[]) ?? [];
-      for (const change of changes) {
-        const value = change.value as Record<string, unknown> | undefined;
-        if (!value?.messages) {
-          continue;
-        }
+    const entries = body.entry ?? [];
 
-        const messages = value.messages as Record<string, unknown>[];
-        for (const message of messages) {
-          await this.processIncomingMessage(message);
-        }
-      }
-    }
-  }
-
-  async sendTestReply(
-    to: string,
-    message = 'DairyKhata',
-  ): Promise<{ sent: boolean; to: string; message: string }> {
-    await this.sendTextMessage(to, message);
-    return { sent: true, to, message };
+    entries.forEach(async (entry) => {
+      const changes = entry.changes ?? [];
+      const changesWithTextMessages = changes.filter((change) =>
+        change.value?.messages?.some((message) => message.type === 'text'),
+      );
+      const textMessages = changesWithTextMessages.map(
+        (change) =>
+          change.value?.messages?.[0] as unknown as WhatsAppWebhookMessage,
+      );
+      textMessages.forEach(async (message) => {
+        await this.processIncomingMessage(message);
+      });
+    });
   }
 
   private async processIncomingMessage(
-    message: Record<string, unknown>,
+    message: WhatsAppWebhookMessage,
   ): Promise<void> {
-    const from = String(message.from ?? ''); // e.g., "919876543210" or "+919876543210"
-    const messageId = message.id ? String(message.id) : undefined;
+    const from = String(message.from ?? '');
+    const cleanedFrom = from.replaceAll('+', '').replace('91', ''); // e.g., "9876543210";
     const messageType = String(message.type ?? 'unknown');
     const messageBody =
-      messageType === 'text'
-        ? String((message.text as Record<string, string>)?.body ?? '')
-        : undefined;
-
-    const log: WhatsAppWebhookLog = {
-      id: `${Date.now()}-${from}`,
-      receivedAt: new Date().toISOString(),
-      from,
-      messageId,
-      messageType,
-      messageBody,
-      replySent: false,
-    };
+      messageType === 'text' ? String(message.text?.body ?? '') : undefined;
 
     if (messageType !== 'text' || !messageBody) {
-      this.addLog(log);
+      this.logger.warn(
+        `Ignored message from unauthorized sender: ${from} with type: ${messageType} and body: ${messageBody}`,
+      );
+      await this.sendTextMessage(
+        from,
+        '❌ Invalid message type. Please send text in format: customerCode productCode',
+      );
       return;
     }
 
     try {
-      // 1. Resolve owner/staff by mobile number
-      const cleanMobile = from.replace(/\D/g, ''); // strip '+', '-', spaces
-
-      const sender = await this.prisma.user.findFirst({
+      // 1. Find owner
+      const owner = await this.prisma.user.findFirst({
         where: {
           status: 'ACTIVE',
-          role: { in: ['OWNER', 'STAFF'] },
-          OR: [
-            { mobile: cleanMobile },
-            { mobile: { endsWith: cleanMobile.slice(-10) } },
-          ],
+          role: 'OWNER',
+          mobile: cleanedFrom,
         },
       });
-
-      if (!sender) {
+      if (!owner) {
         // If not registered/unauthorized owner/staff, ignore to save cost and avoid spamming
-        this.logger.warn(`Ignored message from unauthorized sender: ${from}`);
-        log.replyError = 'Unauthorized sender';
-        this.addLog(log);
+        this.logger.warn(
+          `Ignored message from unauthorized owner: ${cleanedFrom}`,
+        );
+        await this.sendTextMessage(
+          from,
+          '❌ You are not authorized to create entries from WhatsApp.',
+        );
         return;
       }
 
-      const companyId = sender.companyId;
+      const companyId = owner.companyId;
+      console.log('companyId', companyId);
 
-      // 2. Parse multi-line command
-      const lines = messageBody
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-      if (lines.length === 0) {
-        await this.sendTextMessage(from, '❌ Empty command received');
-        log.replySent = true;
-        this.addLog(log);
+      // Split message into three parts: customerCode, productCode, quantity
+      const [customerCode, productCode] = messageBody.split(' ');
+      console.log('customerCode', customerCode);
+      console.log('productCode', productCode);
+      if (!customerCode || !productCode) {
+        this.logger.warn(`Invalid format. Use: customerCode productCode`);
+        await this.sendTextMessage(
+          from,
+          '❌ Invalid format. Use: customerCode productCode',
+        );
         return;
       }
 
-      const results: string[] = [];
-      let successCount = 0;
+      // Find Customer
+      const customer = await this.prisma.user.findFirst({
+        where: {
+          companyId,
+          customerCode,
+          role: UserRole.CUSTOMER,
+          status: Status.ACTIVE,
+        },
+      });
+      console.log('customer', JSON.stringify(customer, null, 2));
+      if (!customer) {
+        this.logger.warn(`Customer not found: ${customerCode}`);
+        await this.sendTextMessage(
+          from,
+          `❌ Customer not found: ${customerCode}`,
+        );
+        return;
+      }
 
-      // Get current date in Asia/Kolkata
-      const dateInKolkata = new Date(
-        new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }),
+      // Find Product
+      const product = await this.prisma.product.findFirst({
+        where: {
+          companyId,
+          productCode,
+          status: Status.ACTIVE,
+        },
+      });
+      console.log('product', JSON.stringify(product, null, 2));
+      if (!product) {
+        this.logger.warn(`Product not found: ${productCode}`);
+        await this.sendTextMessage(
+          from,
+          `❌ Product not found: ${productCode}`,
+        );
+        return;
+      }
+
+      // Find assigned product for this customer
+      const assignedProduct = await this.prisma.userProduct.findFirst({
+        where: {
+          companyId,
+          userId: customer.id,
+          productId: product.id,
+        },
+      });
+      console.log('assignedProduct', JSON.stringify(assignedProduct, null, 2));
+      if (!assignedProduct) {
+        this.logger.warn(
+          `Product not assigned to this customer: ${productCode}`,
+        );
+        await this.sendTextMessage(
+          from,
+          `❌ Product not assigned to this customer: ${productCode}`,
+        );
+        return;
+      }
+
+      // Create daily entry
+      const dailyEntry = await this.dailyEntryService.create(companyId, {
+        userId: customer.id,
+        productId: product.id,
+        quantity: assignedProduct.defaultQty.toNumber(),
+        price: product.price.toNumber(),
+        entryDate: new Date().toISOString().split('T')[0],
+      });
+      console.log('dailyEntry', JSON.stringify(dailyEntry, null, 2));
+
+      // Send confirmation message
+      await this.sendTextMessage(
+        from,
+        `✅ Daily entry created successfully for ${customer.name} - ${product.name} - ${assignedProduct.defaultQty.toNumber()}`,
       );
-      const entryDateString = dateInKolkata.toISOString().split('T')[0];
-
-      for (const line of lines) {
-        // Expected format: customerCode productCode quantity
-        const tokens = line.split(/\s+/).filter((t) => t.length > 0);
-        if (tokens.length < 3) {
-          results.push(
-            `${line} ❌ Invalid format. Use: customerCode productCode quantity`,
-          );
-          continue;
-        }
-
-        const customerCode = tokens[0];
-        const productCode = tokens[1];
-        const quantityStr = tokens[2];
-        const quantity = parseFloat(quantityStr);
-
-        if (isNaN(quantity) || quantity <= 0) {
-          results.push(`${line} ❌ Invalid quantity`);
-          continue;
-        }
-
-        // Find customer
-        const customer = await this.prisma.user.findFirst({
-          where: {
-            companyId,
-            customerCode,
-            role: 'CUSTOMER',
-            status: 'ACTIVE',
-          },
-        });
-
-        if (!customer) {
-          results.push(`❌ Customer not found`);
-          continue;
-        }
-
-        // Find product
-        const product = await this.prisma.product.findFirst({
-          where: {
-            companyId,
-            productCode,
-            status: 'ACTIVE',
-          },
-        });
-
-        if (!product) {
-          results.push(`❌ Product not found`);
-          continue;
-        }
-
-        try {
-          // Use daily entry service to create or update
-          await this.dailyEntryService.create(companyId, {
-            userId: customer.id.toString(),
-            productId: product.id.toString(),
-            entryDate: entryDateString,
-            quantity,
-            price: undefined, // Will be resolved by DailyEntryService
-          } as any);
-
-          successCount++;
-          results.push(`✅ Entry added`);
-        } catch (err) {
-          const errMsg = err instanceof Error ? err.message : 'Error';
-          results.push(`❌ ${errMsg}`);
-        }
-      }
-
-      // Build consolidated reply
-      let replyMessage = '';
-      if (lines.length === 1) {
-        replyMessage = results[0];
-      } else {
-        // Multi-line response: combine inputs and their individual status
-        replyMessage = lines
-          .map((line, idx) => `${line} -> ${results[idx]}`)
-          .join('\n');
-      }
-
-      await this.sendTextMessage(from, replyMessage);
-      log.replySent = true;
     } catch (error) {
-      log.replyError =
+      const errorMessage =
         error instanceof Error ? error.message : 'Failed to process webhook';
-      this.logger.error(`Webhook processing failed: ${log.replyError}`);
-    }
-
-    this.addLog(log);
-  }
-
-  private addLog(log: WhatsAppWebhookLog): void {
-    this.webhookLogs.push(log);
-    if (this.webhookLogs.length > this.maxLogs) {
-      this.webhookLogs.shift();
+      this.logger.error(`Webhook processing failed: ${errorMessage}`);
     }
   }
 
