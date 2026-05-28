@@ -31,7 +31,7 @@ export class CompanyController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update company details' })
   update(@Param('id') id: string, @Body() updateCompanyDto: UpdateCompanyDto) {
-    return this.companyService.update(BigInt(id), updateCompanyDto);
+    return this.companyService.update(id, updateCompanyDto);
   }
 
   @Patch(':id/status')
@@ -40,24 +40,24 @@ export class CompanyController {
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateCompanyStatusDto,
   ) {
-    return this.companyService.updateStatus(BigInt(id), updateStatusDto);
+    return this.companyService.updateStatus(id, updateStatusDto);
   }
 
   @Get(':id/overview')
   @ApiOperation({ summary: 'Get company overview (Super Admin)' })
   getOverview(@Param('id') id: string) {
-    return this.companyService.getOverview(BigInt(id));
+    return this.companyService.getOverview(id);
   }
 
   @Get(':id/users')
   @ApiOperation({ summary: 'Get company users (Super Admin)' })
   getUsers(@Param('id') id: string) {
-    return this.companyService.getUsers(BigInt(id));
+    return this.companyService.getUsers(id);
   }
 
   @Get(':id/products')
   @ApiOperation({ summary: 'Get company products (Super Admin)' })
   getProducts(@Param('id') id: string) {
-    return this.companyService.getProducts(BigInt(id));
+    return this.companyService.getProducts(id);
   }
 }

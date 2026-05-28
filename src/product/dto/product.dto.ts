@@ -14,6 +14,11 @@ export class CreateProductDto {
   @IsString()
   name: string;
 
+  @ApiProperty({ example: 'M' })
+  @IsNotEmpty()
+  @IsString()
+  productCode: string;
+
   @ApiProperty({ example: 'Premium cow milk', required: false })
   @IsOptional()
   @IsString()

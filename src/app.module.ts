@@ -1,5 +1,5 @@
 import { Module, ValidationPipe } from '@nestjs/common';
-import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -12,12 +12,11 @@ import { UserProductModule } from './user-product/user-product.module';
 import { DailyEntryModule } from './daily-entry/daily-entry.module';
 import { UserPaymentModule } from './user-payment/user-payment.module';
 import { SubscriptionModule } from './subscription/subscription.module';
+import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { SubscriptionGuard } from './auth/guards/subscription.guard';
 import { CompanyContextGuard } from './auth/guards/company-context.guard';
-import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -32,6 +31,7 @@ import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
     DailyEntryModule,
     UserPaymentModule,
     SubscriptionModule,
+    WhatsAppModule,
   ],
   controllers: [AppController],
   providers: [
@@ -59,10 +59,6 @@ import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
     {
       provide: APP_GUARD,
       useClass: CompanyContextGuard,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: BigIntInterceptor,
     },
   ],
 })

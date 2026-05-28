@@ -43,6 +43,6 @@ export class SubscriptionController {
     @CurrentUser() user: any,
     @Body() dto: RecordSubscriptionPaymentDto,
   ) {
-    return this.subscriptionService.recordPayment(BigInt(user.userId), dto);
+    return this.subscriptionService.recordPayment(String(user.userId), dto);
   }
 }

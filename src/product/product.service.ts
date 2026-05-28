@@ -15,7 +15,7 @@ import { Status } from '@prisma/client';
 export class ProductService {
   constructor(private prisma: PrismaService) {}
 
-  async create(companyId: bigint, createProductDto: CreateProductDto) {
+  async create(companyId: string, createProductDto: CreateProductDto) {
     const existing = await this.prisma.product.findFirst({
       where: {
         companyId,
@@ -29,6 +29,20 @@ export class ProductService {
       );
     }
 
+    const existingCode = await this.prisma.product.findFirst({
+      where: {
+        companyId,
+        productCode: createProductDto.productCode,
+        status: { not: Status.DELETED },
+      },
+    });
+
+    if (existingCode) {
+      throw new ConflictException(
+        'Product with this code already exists in your company',
+      );
+    }
+
     return this.prisma.product.create({
       data: {
         ...createProductDto,
@@ -38,14 +52,14 @@ export class ProductService {
     });
   }
 
-  async findAll(companyId: bigint) {
+  async findAll(companyId: string) {
     return this.prisma.product.findMany({
       where: { companyId, status: { not: Status.DELETED } },
       orderBy: { name: 'asc' },
     });
   }
 
-  async findOne(companyId: bigint, id: bigint) {
+  async findOne(companyId: string, id: string) {
     const product = await this.prisma.product.findFirst({
       where: { id, companyId },
     });
@@ -56,11 +70,29 @@ export class ProductService {
   }
 
   async update(
-    companyId: bigint,
-    id: bigint,
+    companyId: string,
+    id: string,
     updateProductDto: UpdateProductDto,
   ) {
     await this.findOne(companyId, id);
+
+    if (updateProductDto.productCode) {
+      const existingCode = await this.prisma.product.findFirst({
+        where: {
+          companyId,
+          productCode: updateProductDto.productCode,
+          id: { not: id },
+          status: { not: Status.DELETED },
+        },
+      });
+
+      if (existingCode) {
+        throw new ConflictException(
+          'Product with this code already exists in your company',
+        );
+      }
+    }
+
     return this.prisma.product.update({
       where: { id },
       data: updateProductDto,
@@ -68,8 +100,8 @@ export class ProductService {
   }
 
   async updateStatus(
-    companyId: bigint,
-    id: bigint,
+    companyId: string,
+    id: string,
     updateStatusDto: UpdateProductStatusDto,
   ) {
     await this.findOne(companyId, id);
@@ -79,7 +111,7 @@ export class ProductService {
     });
   }
 
-  async remove(companyId: bigint, id: bigint) {
+  async remove(companyId: string, id: string) {
     await this.findOne(companyId, id);
     return this.prisma.product.update({
       where: { id },

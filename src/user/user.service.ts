@@ -18,7 +18,7 @@ import { UserRole, Status, Prisma, User } from '@prisma/client';
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async create(companyId: bigint, createUserDto: CreateUserDto) {
+  async create(companyId: string, createUserDto: CreateUserDto) {
     const existing = await this.prisma.user.findFirst({
       where: {
         companyId,
@@ -30,6 +30,24 @@ export class UserService {
       throw new ConflictException(
         'User with this mobile number already exists in this company',
       );
+    }
+
+    if (createUserDto.role === UserRole.CUSTOMER) {
+      if (!createUserDto.customerCode) {
+        throw new ConflictException('Customer code is required for customers');
+      }
+      const existingCode = await this.prisma.user.findFirst({
+        where: {
+          companyId,
+          customerCode: createUserDto.customerCode,
+          status: { not: Status.DELETED },
+        },
+      });
+      if (existingCode) {
+        throw new ConflictException(
+          'Customer with this code already exists in this company',
+        );
+      }
     }
 
     // Check plan limits
@@ -86,7 +104,7 @@ export class UserService {
     });
   }
 
-  async findAll(companyId: bigint, query: FindUsersDto) {
+  async findAll(companyId: string, query: FindUsersDto) {
     const { role, status, search } = query;
 
     const where: Prisma.UserWhereInput = {
@@ -119,12 +137,13 @@ export class UserService {
         role: true,
         status: true,
         address: true,
+        customerCode: true,
         createdAt: true,
       },
     });
   }
 
-  async findOne(companyId: bigint, id: bigint) {
+  async findOne(companyId: string, id: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, companyId },
     });
@@ -137,8 +156,8 @@ export class UserService {
   }
 
   async updateStatus(
-    companyId: bigint,
-    id: bigint,
+    companyId: string,
+    id: string,
     updateStatusDto: UpdateUserStatusDto,
   ) {
     const user = await this.prisma.user.findFirst({
@@ -171,7 +190,7 @@ export class UserService {
     });
   }
 
-  async calculateBalance(companyId: bigint, userId: bigint): Promise<number> {
+  async calculateBalance(companyId: string, userId: string): Promise<number> {
     const entriesSum = await this.prisma.dailyEntry.aggregate({
       where: { companyId, userId, status: Status.ACTIVE },
       _sum: { amount: true },
@@ -188,7 +207,7 @@ export class UserService {
     return totalEntries - totalPayments;
   }
 
-  async update(companyId: bigint, id: bigint, dto: UpdateUserDto) {
+  async update(companyId: string, id: string, dto: UpdateUserDto) {
     const user = await this.prisma.user.findFirst({
       where: { id, companyId },
     });
@@ -213,6 +232,22 @@ export class UserService {
       }
     }
 
+    if (dto.customerCode && dto.customerCode !== user.customerCode) {
+      const existingCode = await this.prisma.user.findFirst({
+        where: {
+          companyId,
+          customerCode: dto.customerCode,
+          id: { not: id },
+          status: { not: Status.DELETED },
+        },
+      });
+      if (existingCode) {
+        throw new ConflictException(
+          'Customer with this code already exists in this company',
+        );
+      }
+    }
+
     const { password, ...updateData } = dto;
     const data: User = { ...user, ...updateData };
 
@@ -226,7 +261,7 @@ export class UserService {
     });
   }
 
-  async remove(companyId: bigint, id: bigint) {
+  async remove(companyId: string, id: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, companyId },
     });

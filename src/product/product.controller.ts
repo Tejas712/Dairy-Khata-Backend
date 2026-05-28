@@ -28,7 +28,7 @@ export class ProductController {
   @Post()
   @ApiOperation({ summary: 'Create a new product' })
   create(
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Body() createProductDto: CreateProductDto,
   ) {
     return this.productService.create(companyId, createProductDto);
@@ -36,44 +36,40 @@ export class ProductController {
 
   @Get()
   @ApiOperation({ summary: 'List all products' })
-  findAll(@CurrentCompanyId() companyId: bigint) {
+  findAll(@CurrentCompanyId() companyId: string) {
     return this.productService.findAll(companyId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get product details' })
-  findOne(@CurrentCompanyId() companyId: bigint, @Param('id') id: string) {
-    return this.productService.findOne(companyId, BigInt(id));
+  findOne(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
+    return this.productService.findOne(companyId, id);
   }
 
   @Patch(':id')
   @Put(':id')
   @ApiOperation({ summary: 'Update product details' })
   update(
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
   ) {
-    return this.productService.update(companyId, BigInt(id), updateProductDto);
+    return this.productService.update(companyId, id, updateProductDto);
   }
 
   @Patch(':id/status')
   @ApiOperation({ summary: 'Update product status' })
   updateStatus(
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateProductStatusDto,
   ) {
-    return this.productService.updateStatus(
-      companyId,
-      BigInt(id),
-      updateStatusDto,
-    );
+    return this.productService.updateStatus(companyId, id, updateStatusDto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Soft delete a product' })
-  remove(@CurrentCompanyId() companyId: bigint, @Param('id') id: string) {
-    return this.productService.remove(companyId, BigInt(id));
+  remove(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
+    return this.productService.remove(companyId, id);
   }
 }

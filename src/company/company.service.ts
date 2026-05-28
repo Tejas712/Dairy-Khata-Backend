@@ -9,6 +9,7 @@ import {
   UpdateCompanyDto,
   UpdateCompanyStatusDto,
 } from './dto/company.dto';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -29,33 +30,21 @@ export class CompanyService {
         data: dto.company,
       });
 
-      // 2. Assign default FREE plan (find or create)
-      let freePlan = await tx.subscriptionPlan.findFirst({
-        where: { name: 'FREE', status: 'ACTIVE' },
-      });
-
-      if (!freePlan) {
-        freePlan = await tx.subscriptionPlan.create({
-          data: {
-            name: 'FREE',
-            price: 0,
-            durationDays: 30, // Default 30 days
-            maxCustomers: 10, // Small limit for free
-            maxAdmins: 1,
-            status: 'ACTIVE',
-            description: 'Default Free Plan',
-          },
-        });
-      }
-
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setDate(startDate.getDate() + freePlan.durationDays);
+      // 2. Assign subscription plan
+      const plan = await this.resolveSubscriptionPlan(
+        tx,
+        dto.subscription?.planId,
+      );
+      const startDate = dto.subscription?.startDate
+        ? new Date(dto.subscription.startDate)
+        : new Date();
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + plan.durationDays);
 
       await tx.companySubscription.create({
         data: {
           companyId: company.id,
-          planId: freePlan.id,
+          planId: plan.id,
           startDate,
           endDate,
           status: 'ACTIVE',
@@ -77,9 +66,43 @@ export class CompanyService {
       });
 
       const { passwordHash: _, ...adminInfo } = admin;
-      console.log(_);
       return { company, admin: adminInfo };
     });
+  }
+
+  private async resolveSubscriptionPlan(
+    tx: Prisma.TransactionClient,
+    planId?: string,
+  ) {
+    if (planId) {
+      const plan = await tx.subscriptionPlan.findUnique({
+        where: { id: planId },
+      });
+      if (!plan) {
+        throw new NotFoundException('Subscription plan not found');
+      }
+      return plan;
+    }
+
+    let freePlan = await tx.subscriptionPlan.findFirst({
+      where: { name: 'FREE', status: 'ACTIVE' },
+    });
+
+    if (!freePlan) {
+      freePlan = await tx.subscriptionPlan.create({
+        data: {
+          name: 'FREE',
+          price: 0,
+          durationDays: 30,
+          maxCustomers: 10,
+          maxAdmins: 1,
+          status: 'ACTIVE',
+          description: 'Default Free Plan',
+        },
+      });
+    }
+
+    return freePlan;
   }
 
   async findAll() {
@@ -88,7 +111,7 @@ export class CompanyService {
     });
   }
 
-  async findOne(id: bigint) {
+  async findOne(id: string) {
     const company = await this.prisma.company.findUnique({
       where: { id },
     });
@@ -98,7 +121,7 @@ export class CompanyService {
     return company;
   }
 
-  async update(id: bigint, updateCompanyDto: UpdateCompanyDto) {
+  async update(id: string, updateCompanyDto: UpdateCompanyDto) {
     await this.findOne(id);
     return this.prisma.company.update({
       where: { id },
@@ -106,7 +129,7 @@ export class CompanyService {
     });
   }
 
-  async updateStatus(id: bigint, updateStatusDto: UpdateCompanyStatusDto) {
+  async updateStatus(id: string, updateStatusDto: UpdateCompanyStatusDto) {
     await this.findOne(id);
     return this.prisma.company.update({
       where: { id },
@@ -114,7 +137,7 @@ export class CompanyService {
     });
   }
 
-  async getOverview(id: bigint) {
+  async getOverview(id: string) {
     const [userCount, productCount, subscription] = await Promise.all([
       this.prisma.user.count({ where: { companyId: id } }),
       this.prisma.product.count({ where: { companyId: id } }),
@@ -131,7 +154,7 @@ export class CompanyService {
     };
   }
 
-  async getUsers(id: bigint) {
+  async getUsers(id: string) {
     return this.prisma.user.findMany({
       where: { companyId: id },
       orderBy: { createdAt: 'desc' },
@@ -146,14 +169,14 @@ export class CompanyService {
     });
   }
 
-  async getProducts(id: bigint) {
+  async getProducts(id: string) {
     return this.prisma.product.findMany({
       where: { companyId: id },
       orderBy: { name: 'asc' },
     });
   }
 
-  async getStats(companyId: bigint) {
+  async getStats(companyId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

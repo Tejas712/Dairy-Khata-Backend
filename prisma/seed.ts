@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole } from '../generated/prisma/client';
+import { PrismaClient, Status, UserRole } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
@@ -6,11 +6,6 @@ import * as dotenv from 'dotenv';
 
 // Load environment variables from .env file
 dotenv.config();
-
-// BigInt polyfill for JSON.stringify (used in console.log by Prisma)
-(BigInt.prototype as any).toJSON = function () {
-  return this.toString();
-};
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -34,7 +29,29 @@ async function main() {
 
   console.log(`Company created/found: ${company.name} (${String(company.id)})`);
 
-  // 2. Create Super Admin User
+  // 2. Seed default FREE subscription plan
+  const freePlan = await prisma.subscriptionPlan.findFirst({
+    where: { name: 'FREE' },
+  });
+
+  if (!freePlan) {
+    await prisma.subscriptionPlan.create({
+      data: {
+        name: 'FREE',
+        price: 0,
+        durationDays: 30,
+        maxCustomers: 10,
+        maxAdmins: 1,
+        description: 'Default free plan',
+        status: Status.ACTIVE,
+      },
+    });
+    console.log('FREE plan created');
+  } else {
+    console.log('FREE plan already exists');
+  }
+
+  // 3. Create Super Admin User
   const hashedPassword = await bcrypt.hash('Admin@123', 10);
 
   const superAdmin = await prisma.user.upsert({
@@ -52,6 +69,7 @@ async function main() {
       email: 'admin@dairykhata.com',
       passwordHash: hashedPassword,
       role: UserRole.SUPER_ADMIN,
+      customerCode: 'SUP1',
     },
   });
 

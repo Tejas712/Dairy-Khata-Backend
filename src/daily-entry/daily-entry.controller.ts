@@ -33,7 +33,7 @@ export class DailyEntryController {
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiOperation({ summary: 'Add or update a daily entry' })
   create(
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Body() dto: CreateDailyEntryDto,
   ) {
     return this.dailyEntryService.create(companyId, dto);
@@ -46,21 +46,21 @@ export class DailyEntryController {
   @ApiQuery({ name: 'endDate', required: false })
   findAll(
     @CurrentUser() user: any,
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Query('userId') userId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    const targetUserId = userId ? BigInt(userId) : undefined;
+    const targetUserId = userId || undefined;
 
     // CUSTOMER can only see own entries
     if (user.role === UserRole.CUSTOMER) {
-      if (targetUserId && targetUserId !== BigInt(user.userId)) {
+      if (targetUserId && targetUserId !== String(user.userId)) {
         throw new ForbiddenException('You can only view your own entries');
       }
       return this.dailyEntryService.findAll(
         companyId,
-        BigInt(user.userId),
+        String(user.userId),
         startDate,
         endDate,
       );
@@ -77,7 +77,7 @@ export class DailyEntryController {
   @Delete(':id')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Delete a daily entry' })
-  remove(@CurrentCompanyId() companyId: bigint, @Param('id') id: string) {
-    return this.dailyEntryService.remove(companyId, BigInt(id));
+  remove(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
+    return this.dailyEntryService.remove(companyId, id);
   }
 }

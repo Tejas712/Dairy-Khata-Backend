@@ -37,6 +37,11 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @ApiProperty({ example: '101', required: false })
+  @IsOptional()
+  @IsString()
+  customerCode?: string;
 }
 
 export class UpdateUserStatusDto {

@@ -30,7 +30,7 @@ export class UserController {
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Create a new user (STAFF/CUSTOMER)' })
   create(
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Body() createUserDto: CreateUserDto,
   ) {
     return this.userService.create(companyId, createUserDto);
@@ -39,30 +39,26 @@ export class UserController {
   @Get()
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiOperation({ summary: 'List all users in company' })
-  findAll(@CurrentCompanyId() companyId: bigint, @Query() query: FindUsersDto) {
+  findAll(@CurrentCompanyId() companyId: string, @Query() query: FindUsersDto) {
     return this.userService.findAll(companyId, query);
   }
 
   @Get(':id')
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiOperation({ summary: 'Get user details' })
-  findOne(@CurrentCompanyId() companyId: bigint, @Param('id') id: string) {
-    return this.userService.findOne(companyId, BigInt(id));
+  findOne(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
+    return this.userService.findOne(companyId, id);
   }
 
   @Patch(':id/status')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Update user status' })
   updateStatus(
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateUserStatusDto,
   ) {
-    return this.userService.updateStatus(
-      companyId,
-      BigInt(id),
-      updateStatusDto,
-    );
+    return this.userService.updateStatus(companyId, id, updateStatusDto);
   }
 
   @Patch(':id')
@@ -70,17 +66,17 @@ export class UserController {
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Update user details' })
   update(
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    return this.userService.update(companyId, BigInt(id), updateUserDto);
+    return this.userService.update(companyId, id, updateUserDto);
   }
 
   @Delete(':id')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Soft delete user' })
-  remove(@CurrentCompanyId() companyId: bigint, @Param('id') id: string) {
-    return this.userService.remove(companyId, BigInt(id));
+  remove(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
+    return this.userService.remove(companyId, id);
   }
 }

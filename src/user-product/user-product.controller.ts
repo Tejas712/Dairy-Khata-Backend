@@ -29,7 +29,7 @@ export class UserProductController {
 
   @Post()
   @ApiOperation({ summary: 'Assign a product to a customer' })
-  assign(@CurrentCompanyId() companyId: bigint, @Body() dto: AssignProductDto) {
+  assign(@CurrentCompanyId() companyId: string, @Body() dto: AssignProductDto) {
     return this.userProductService.assign(companyId, dto);
   }
 
@@ -37,12 +37,12 @@ export class UserProductController {
   @ApiOperation({ summary: 'List all product assignments' })
   @ApiQuery({ name: 'userId', required: false })
   findAll(
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Query('userId') userId?: string,
   ) {
     return this.userProductService.findAll(
       companyId,
-      userId ? BigInt(userId) : undefined,
+      userId || undefined,
     );
   }
 
@@ -50,16 +50,16 @@ export class UserProductController {
   @Put(':id')
   @ApiOperation({ summary: 'Update assignment details' })
   update(
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Param('id') id: string,
     @Body() dto: UpdateUserProductDto,
   ) {
-    return this.userProductService.update(companyId, BigInt(id), dto);
+    return this.userProductService.update(companyId, id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Remove product assignment' })
-  remove(@CurrentCompanyId() companyId: bigint, @Param('id') id: string) {
-    return this.userProductService.remove(companyId, BigInt(id));
+  remove(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
+    return this.userProductService.remove(companyId, id);
   }
 }

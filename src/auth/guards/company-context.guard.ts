@@ -46,7 +46,7 @@ export class CompanyContextGuard implements CanActivate {
 
     // Validate company exists
     const company = await this.prisma.company.findUnique({
-      where: { id: BigInt(companyId) },
+      where: { id: String(companyId) },
     });
 
     if (!company) {

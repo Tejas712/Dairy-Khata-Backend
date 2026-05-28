@@ -27,7 +27,7 @@ export class SubscriptionService {
   // Company Subscriptions
   async assignPlan(dto: AssignPlanDto) {
     const plan = await this.prisma.subscriptionPlan.findUnique({
-      where: { id: BigInt(dto.planId) },
+      where: { id: dto.planId },
     });
     if (!plan) throw new NotFoundException('Plan not found');
 
@@ -36,16 +36,16 @@ export class SubscriptionService {
     endDate.setDate(startDate.getDate() + plan.durationDays);
 
     return this.prisma.companySubscription.upsert({
-      where: { companyId: BigInt(dto.companyId) },
+      where: { companyId: dto.companyId },
       update: {
-        planId: BigInt(dto.planId),
+        planId: dto.planId,
         startDate,
         endDate,
         status: Status.ACTIVE,
       },
       create: {
-        companyId: BigInt(dto.companyId),
-        planId: BigInt(dto.planId),
+        companyId: dto.companyId,
+        planId: dto.planId,
         startDate,
         endDate,
         status: Status.ACTIVE,
@@ -54,11 +54,11 @@ export class SubscriptionService {
   }
 
   // Subscription Payments
-  async recordPayment(adminId: bigint, dto: RecordSubscriptionPaymentDto) {
+  async recordPayment(adminId: string, dto: RecordSubscriptionPaymentDto) {
     return this.prisma.companySubscriptionPayment.create({
       data: {
-        companyId: BigInt(dto.companyId),
-        planId: BigInt(dto.planId),
+        companyId: dto.companyId,
+        planId: dto.planId,
         amount: dto.amount,
         paymentDate: new Date(dto.paymentDate),
         paymentMode: dto.paymentMode,
@@ -68,7 +68,7 @@ export class SubscriptionService {
     });
   }
 
-  async findCompanySubscription(companyId: bigint) {
+  async findCompanySubscription(companyId: string) {
     return this.prisma.companySubscription.findUnique({
       where: { companyId },
       include: { plan: true },

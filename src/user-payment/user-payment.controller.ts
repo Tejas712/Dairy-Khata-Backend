@@ -33,7 +33,7 @@ export class UserPaymentController {
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Add a user payment' })
   create(
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Body() dto: CreateUserPaymentDto,
   ) {
     return this.userPaymentService.create(companyId, dto);
@@ -44,17 +44,17 @@ export class UserPaymentController {
   @ApiQuery({ name: 'userId', required: false })
   findAll(
     @CurrentUser() user: any,
-    @CurrentCompanyId() companyId: bigint,
+    @CurrentCompanyId() companyId: string,
     @Query('userId') userId?: string,
   ) {
-    const targetUserId = userId ? BigInt(userId) : undefined;
+    const targetUserId = userId || undefined;
 
     // CUSTOMER can only see own payments
     if (user.role === UserRole.CUSTOMER) {
-      if (targetUserId && targetUserId !== BigInt(user.userId)) {
+      if (targetUserId && targetUserId !== String(user.userId)) {
         throw new ForbiddenException('You can only view your own payments');
       }
-      return this.userPaymentService.findAll(companyId, BigInt(user.userId));
+      return this.userPaymentService.findAll(companyId, String(user.userId));
     }
 
     return this.userPaymentService.findAll(companyId, targetUserId);
@@ -63,7 +63,7 @@ export class UserPaymentController {
   @Delete(':id')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Delete a payment record' })
-  remove(@CurrentCompanyId() companyId: bigint, @Param('id') id: string) {
-    return this.userPaymentService.remove(companyId, BigInt(id));
+  remove(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
+    return this.userPaymentService.remove(companyId, id);
   }
 }

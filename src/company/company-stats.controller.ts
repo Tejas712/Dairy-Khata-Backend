@@ -14,7 +14,7 @@ export class CompanyStatsController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Get company dashboard statistics' })
-  getStats(@CurrentCompanyId() companyId: bigint) {
+  getStats(@CurrentCompanyId() companyId: string) {
     return this.companyService.getStats(companyId);
   }
 }

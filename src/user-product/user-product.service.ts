@@ -10,9 +10,9 @@ import { AssignProductDto, UpdateUserProductDto } from './dto/user-product.dto';
 export class UserProductService {
   constructor(private prisma: PrismaService) {}
 
-  async assign(companyId: bigint, dto: AssignProductDto) {
-    const userId = BigInt(dto.userId);
-    const productId = BigInt(dto.productId);
+  async assign(companyId: string, dto: AssignProductDto) {
+    const userId = dto.userId;
+    const productId = dto.productId;
 
     const existing = await this.prisma.userProduct.findUnique({
       where: {
@@ -39,7 +39,7 @@ export class UserProductService {
     });
   }
 
-  async findAll(companyId: bigint, userId?: bigint) {
+  async findAll(companyId: string, userId?: string) {
     return this.prisma.userProduct.findMany({
       where: {
         companyId,
@@ -51,7 +51,7 @@ export class UserProductService {
     });
   }
 
-  async update(companyId: bigint, id: bigint, dto: UpdateUserProductDto) {
+  async update(companyId: string, id: string, dto: UpdateUserProductDto) {
     const userProduct = await this.prisma.userProduct.findFirst({
       where: { id, companyId },
     });
@@ -69,7 +69,7 @@ export class UserProductService {
     });
   }
 
-  async remove(companyId: bigint, id: bigint) {
+  async remove(companyId: string, id: string) {
     const userProduct = await this.prisma.userProduct.findFirst({
       where: { id, companyId },
     });

@@ -7,9 +7,9 @@ import { Status } from '@prisma/client';
 export class DailyEntryService {
   constructor(private prisma: PrismaService) {}
 
-  async create(companyId: bigint, dto: CreateDailyEntryDto) {
-    const userId = BigInt(dto.userId);
-    const productId = BigInt(dto.productId);
+  async create(companyId: string, dto: CreateDailyEntryDto) {
+    const userId = dto.userId;
+    const productId = dto.productId;
 
     let price = dto.price;
 
@@ -67,8 +67,8 @@ export class DailyEntryService {
   }
 
   async findAll(
-    companyId: bigint,
-    userId?: bigint,
+    companyId: string,
+    userId?: string,
     startDate?: string,
     endDate?: string,
   ) {
@@ -92,7 +92,7 @@ export class DailyEntryService {
     });
   }
 
-  async remove(companyId: bigint, id: bigint) {
+  async remove(companyId: string, id: string) {
     const entry = await this.prisma.dailyEntry.findFirst({
       where: { id, companyId },
     });

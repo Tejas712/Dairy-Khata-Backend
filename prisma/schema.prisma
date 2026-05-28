@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -37,7 +34,7 @@ enum Status {
 //////////////////////////////////////////////////////
 
 model Company {
-  id          BigInt   @id @default(autoincrement())
+  id          String   @id @default(uuid())
   name        String
   companyCode String   @unique
   ownerName   String?
@@ -60,10 +57,11 @@ model Company {
 //////////////////////////////////////////////////////
 
 model User {
-  id           BigInt   @id @default(autoincrement())
-  companyId    BigInt
+  id           String   @id @default(uuid())
+  companyId    String
   name         String
   mobile       String
+  customerCode String?
   email        String?  @unique
   passwordHash String
   role         UserRole
@@ -78,15 +76,17 @@ model User {
   handledPayments CompanySubscriptionPayment[] @relation("HandledBy")
 
   @@unique([companyId, mobile])
+  @@unique([companyId, customerCode])
   @@map("user")
 }
 
 //////////////////////////////////////////////////////
 
 model Product {
-  id          BigInt   @id @default(autoincrement())
-  companyId   BigInt
+  id          String   @id @default(uuid())
+  companyId   String
   name        String
+  productCode String?
   description String?
   unit        String
   price       Decimal  @db.Decimal(10, 2)
@@ -98,16 +98,17 @@ model Product {
   dailyEntries DailyEntry[]
 
   @@unique([companyId, name])
+  @@unique([companyId, productCode])
   @@map("product")
 }
 
 //////////////////////////////////////////////////////
 
 model UserProduct {
-  id          BigInt   @id @default(autoincrement())
-  companyId   BigInt
-  userId      BigInt
-  productId   BigInt
+  id          String   @id @default(uuid())
+  companyId   String
+  userId      String
+  productId   String
   defaultQty  Decimal  @db.Decimal(10, 2)
   customPrice Decimal? @db.Decimal(10, 2)
   status      Status   @default(ACTIVE)
@@ -124,10 +125,10 @@ model UserProduct {
 //////////////////////////////////////////////////////
 
 model DailyEntry {
-  id        BigInt   @id @default(autoincrement())
-  companyId BigInt
-  userId    BigInt
-  productId BigInt
+  id        String   @id @default(uuid())
+  companyId String
+  userId    String
+  productId String
   entryDate DateTime @db.Date
   quantity  Decimal  @db.Decimal(10, 2)
   price     Decimal  @db.Decimal(10, 2)
@@ -146,9 +147,9 @@ model DailyEntry {
 //////////////////////////////////////////////////////
 
 model UserPayment {
-  id          BigInt   @id @default(autoincrement())
-  companyId   BigInt
-  userId      BigInt
+  id          String   @id @default(uuid())
+  companyId   String
+  userId      String
   amount      Decimal  @db.Decimal(10, 2)
   paymentDate DateTime @db.Date
   paymentMode String
@@ -165,7 +166,7 @@ model UserPayment {
 //////////////////////////////////////////////////////
 
 model SubscriptionPlan {
-  id           BigInt   @id @default(autoincrement())
+  id           String   @id @default(uuid())
   name         String
   price        Decimal  @db.Decimal(10, 2)
   durationDays Int
@@ -184,9 +185,9 @@ model SubscriptionPlan {
 //////////////////////////////////////////////////////
 
 model CompanySubscription {
-  id        BigInt   @id @default(autoincrement())
-  companyId BigInt   @unique
-  planId    BigInt
+  id        String   @id @default(uuid())
+  companyId String   @unique
+  planId    String
   startDate DateTime @db.Date
   endDate   DateTime @db.Date
   status    Status   @default(ACTIVE)
@@ -201,14 +202,14 @@ model CompanySubscription {
 //////////////////////////////////////////////////////
 
 model CompanySubscriptionPayment {
-  id          BigInt   @id @default(autoincrement())
-  companyId   BigInt
-  planId      BigInt
+  id          String   @id @default(uuid())
+  companyId   String
+  planId      String
   amount      Decimal  @db.Decimal(10, 2)
   paymentDate DateTime @db.Date
   paymentMode String
   reference   String?
-  handledById BigInt
+  handledById String
   status      Status   @default(ACTIVE)
   createdAt   DateTime @default(now())
 

@@ -7,11 +7,11 @@ import { Status } from '@prisma/client';
 export class UserPaymentService {
   constructor(private prisma: PrismaService) {}
 
-  async create(companyId: bigint, dto: CreateUserPaymentDto) {
+  async create(companyId: string, dto: CreateUserPaymentDto) {
     return this.prisma.userPayment.create({
       data: {
         companyId,
-        userId: BigInt(dto.userId),
+        userId: dto.userId,
         amount: dto.amount,
         paymentDate: new Date(dto.paymentDate),
         paymentMode: dto.paymentMode,
@@ -20,7 +20,7 @@ export class UserPaymentService {
     });
   }
 
-  async findAll(companyId: bigint, userId?: bigint) {
+  async findAll(companyId: string, userId?: string) {
     return this.prisma.userPayment.findMany({
       where: {
         companyId,
@@ -36,7 +36,7 @@ export class UserPaymentService {
     });
   }
 
-  async remove(companyId: bigint, id: bigint) {
+  async remove(companyId: string, id: string) {
     const payment = await this.prisma.userPayment.findFirst({
       where: { id, companyId },
     });

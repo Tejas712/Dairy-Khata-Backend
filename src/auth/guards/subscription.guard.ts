@@ -19,9 +19,10 @@ export class SubscriptionGuard implements CanActivate {
       return true;
     }
 
-    const companyId = BigInt(user.companyId);
     const subscription =
-      await this.subscriptionService.findCompanySubscription(companyId);
+      await this.subscriptionService.findCompanySubscription(
+        String(user.companyId),
+      );
 
     if (
       !subscription ||

@@ -1,4 +1,12 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Status } from '@prisma/client';
 
@@ -51,14 +59,36 @@ export class CreateAdminDto {
   password: string;
 }
 
+export class CreateCompanySubscriptionDto {
+  @ApiProperty({ example: '1' })
+  @IsNotEmpty()
+  @IsString()
+  planId: string;
+
+  @ApiProperty({ example: '2026-05-27', required: false })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+}
+
 export class CreateCompanyWithAdminDto {
   @ApiProperty()
   @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => CreateCompanyDto)
   company: CreateCompanyDto;
 
   @ApiProperty()
   @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => CreateAdminDto)
   admin: CreateAdminDto;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateCompanySubscriptionDto)
+  subscription?: CreateCompanySubscriptionDto;
 }
 
 export class UpdateCompanyStatusDto {
