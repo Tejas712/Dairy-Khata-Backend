@@ -48,6 +48,13 @@ export class UserController {
     return this.userService.findAll(companyId, query);
   }
 
+  @Get('balance/:id')
+  @Roles(UserRole.OWNER, UserRole.STAFF, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get customer pending balance' })
+  getBalance(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
+    return this.userService.getBalance(companyId, id);
+  }
+
   @Get(':id')
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiOperation({ summary: 'Get user details' })

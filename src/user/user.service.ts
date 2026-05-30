@@ -187,6 +187,25 @@ export class UserService {
     });
   }
 
+  async getBalance(companyId: string, userId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, companyId, role: UserRole.CUSTOMER },
+      select: { id: true, name: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    const balance = await this.calculateBalance(companyId, userId);
+
+    return {
+      userId: user.id,
+      customerName: user.name,
+      balance,
+    };
+  }
+
   async calculateBalance(companyId: string, userId: string): Promise<number> {
     const entriesSum = await this.prisma.dailyEntry.aggregate({
       where: { companyId, userId, status: Status.ACTIVE },
