@@ -64,7 +64,7 @@ export class WhatsAppController {
   @Roles(UserRole.OWNER, UserRole.STAFF, UserRole.SUPER_ADMIN)
   @ApiOperation({
     summary:
-      'Process WhatsApp-like command from in-app chatbot (customerCode productCode)',
+      'Process WhatsApp-like command from in-app chatbot (code productCode)',
   })
   async chatbot(
     @CurrentUser() user: any,

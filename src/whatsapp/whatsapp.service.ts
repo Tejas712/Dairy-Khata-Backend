@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { DailyEntryService } from '../daily-entry/daily-entry.service';
+import { EntryService } from '../entry/entry.service';
 import {
   WhatsAppWebhookMessage,
   WhatsAppWebhookPayload,
@@ -16,7 +16,7 @@ export class WhatsAppService {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
-    private readonly dailyEntryService: DailyEntryService,
+    private readonly entryService: EntryService,
   ) {}
 
   verifyWebhook(mode: string, token: string, challenge: string): string | null {
@@ -65,7 +65,7 @@ export class WhatsAppService {
       );
       await this.sendTextMessage(
         from,
-        '❌ Invalid message type. Please send text in format: customerCode productCode',
+        '❌ Invalid message type. Please send text in format: code productCode',
       );
       return;
     }
@@ -148,28 +148,28 @@ export class WhatsAppService {
     companyId: string,
     messageBody: string,
   ): Promise<ChatbotMessageResponseDto> {
-    const [customerCode, productCode] = messageBody.trim().split(/\s+/);
-    if (!customerCode || !productCode) {
-      this.logger.warn(`Invalid format. Use: customerCode productCode`);
+    const [code, productCode] = messageBody.trim().split(/\s+/);
+    if (!code || !productCode) {
+      this.logger.warn(`Invalid format. Use: code productCode`);
       return {
         success: false,
-        message: '❌ Invalid format. Use: customerCode productCode',
+        message: '❌ Invalid format. Use: code productCode',
       };
     }
 
     const customer = await this.prisma.user.findFirst({
       where: {
         companyId,
-        customerCode,
+        code,
         role: UserRole.CUSTOMER,
         status: Status.ACTIVE,
       },
     });
     if (!customer) {
-      this.logger.warn(`Customer not found: ${customerCode}`);
+      this.logger.warn(`Customer not found: ${code}`);
       return {
         success: false,
-        message: `❌ Customer not found: ${customerCode}`,
+        message: `❌ Customer not found: ${code}`,
       };
     }
 
@@ -203,7 +203,7 @@ export class WhatsAppService {
       };
     }
 
-    await this.dailyEntryService.create(
+    await this.entryService.create(
       companyId,
       {
         userId: customer.id,

@@ -12,7 +12,7 @@ import {
   UpdateUserDto,
 } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
-import { UserRole, Status, Prisma, User } from '@prisma/client';
+import { UserRole, Status, Prisma, User, EntryType, PaymentType } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -32,14 +32,21 @@ export class UserService {
       );
     }
 
-    if (createUserDto.role === UserRole.CUSTOMER) {
-      if (!createUserDto.customerCode) {
-        throw new ConflictException('Customer code is required for customers');
+    if (
+      createUserDto.role === UserRole.CUSTOMER ||
+      createUserDto.role === UserRole.SUPPLIER
+    ) {
+      if (!createUserDto.code) {
+        throw new ConflictException(
+          createUserDto.role === UserRole.SUPPLIER
+            ? 'Supplier code is required'
+            : 'Customer code is required for customers',
+        );
       }
       const existingCode = await this.prisma.user.findFirst({
         where: {
           companyId,
-          customerCode: createUserDto.customerCode,
+          code: createUserDto.code,
           status: { not: Status.DELETED },
         },
       });
@@ -119,6 +126,7 @@ export class UserService {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { mobile: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -133,7 +141,7 @@ export class UserService {
         role: true,
         status: true,
         address: true,
-        customerCode: true,
+        code: true,
         createdAt: true,
       },
     });
@@ -189,15 +197,22 @@ export class UserService {
 
   async getBalance(companyId: string, userId: string) {
     const user = await this.prisma.user.findFirst({
-      where: { id: userId, companyId, role: UserRole.CUSTOMER },
-      select: { id: true, name: true },
+      where: {
+        id: userId,
+        companyId,
+        role: { in: [UserRole.CUSTOMER, UserRole.SUPPLIER] },
+      },
+      select: { id: true, name: true, role: true },
     });
 
     if (!user) {
-      throw new NotFoundException('Customer not found');
+      throw new NotFoundException('User not found');
     }
 
-    const balance = await this.calculateBalance(companyId, userId);
+    const balance =
+      user.role === UserRole.SUPPLIER
+        ? await this.calculateSupplierBalance(companyId, userId)
+        : await this.calculateBalance(companyId, userId);
 
     return {
       userId: user.id,
@@ -207,13 +222,13 @@ export class UserService {
   }
 
   async calculateBalance(companyId: string, userId: string): Promise<number> {
-    const entriesSum = await this.prisma.dailyEntry.aggregate({
-      where: { companyId, userId, status: Status.ACTIVE },
+    const entriesSum = await this.prisma.entry.aggregate({
+      where: { companyId, userId, status: Status.ACTIVE, type: EntryType.SALE },
       _sum: { amount: true },
     });
 
     const paymentsSum = await this.prisma.userPayment.aggregate({
-      where: { companyId, userId, status: Status.ACTIVE },
+      where: { companyId, userId, status: Status.ACTIVE, type: PaymentType.CASH_IN },
       _sum: { amount: true },
     });
 
@@ -221,6 +236,36 @@ export class UserService {
     const totalPayments = paymentsSum._sum.amount?.toNumber() ?? 0;
 
     return totalEntries - totalPayments;
+  }
+
+  async calculateSupplierBalance(
+    companyId: string,
+    userId: string,
+  ): Promise<number> {
+    const purchasesSum = await this.prisma.entry.aggregate({
+      where: {
+        companyId,
+        userId,
+        status: Status.ACTIVE,
+        type: EntryType.PURCHASE,
+      },
+      _sum: { amount: true },
+    });
+
+    const paymentsSum = await this.prisma.userPayment.aggregate({
+      where: {
+        companyId,
+        userId,
+        status: Status.ACTIVE,
+        type: PaymentType.CASH_OUT,
+      },
+      _sum: { amount: true },
+    });
+
+    const totalPurchases = purchasesSum._sum.amount?.toNumber() ?? 0;
+    const totalPayments = paymentsSum._sum.amount?.toNumber() ?? 0;
+
+    return totalPurchases - totalPayments;
   }
 
   async update(companyId: string, id: string, dto: UpdateUserDto, actorId: string) {
@@ -248,11 +293,11 @@ export class UserService {
       }
     }
 
-    if (dto.customerCode && dto.customerCode !== user.customerCode) {
+    if (dto.code && dto.code !== user.code) {
       const existingCode = await this.prisma.user.findFirst({
         where: {
           companyId,
-          customerCode: dto.customerCode,
+          code: dto.code,
           id: { not: id },
           status: { not: Status.DELETED },
         },

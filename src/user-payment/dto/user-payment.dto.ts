@@ -4,8 +4,10 @@ import {
   IsString,
   IsDateString,
   IsOptional,
+  IsEnum,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaymentType } from '@prisma/client';
 
 export class CreateUserPaymentDto {
   @ApiProperty({ example: '1' })
@@ -31,4 +33,9 @@ export class CreateUserPaymentDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiPropertyOptional({ enum: PaymentType, default: PaymentType.CASH_IN })
+  @IsOptional()
+  @IsEnum(PaymentType)
+  type?: PaymentType;
 }

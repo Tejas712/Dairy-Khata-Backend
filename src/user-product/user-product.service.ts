@@ -70,7 +70,8 @@ export class UserProductService {
           select: {
             id: true,
             name: true,
-            customerCode: true,
+            code: true,
+            role: true,
           },
         },
       },

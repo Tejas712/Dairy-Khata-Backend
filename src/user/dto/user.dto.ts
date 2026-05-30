@@ -41,7 +41,7 @@ export class CreateUserDto {
   @ApiProperty({ example: '101', required: false })
   @IsOptional()
   @IsString()
-  customerCode?: string;
+  code?: string;
 }
 
 export class UpdateUserStatusDto {

@@ -25,11 +25,11 @@ import { UserRole } from '@prisma/client';
 @ApiTags('products')
 @ApiBearerAuth()
 @Controller('products')
-@Roles(UserRole.OWNER)
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Post()
+  @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Create a new product' })
   create(
     @CurrentUser() user: any,
@@ -44,12 +44,14 @@ export class ProductController {
   }
 
   @Get()
+  @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiOperation({ summary: 'List all products' })
   findAll(@CurrentCompanyId() companyId: string) {
     return this.productService.findAll(companyId);
   }
 
   @Get(':id')
+  @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiOperation({ summary: 'Get product details' })
   findOne(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
     return this.productService.findOne(companyId, id);
@@ -57,6 +59,7 @@ export class ProductController {
 
   @Patch(':id')
   @Put(':id')
+  @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Update product details' })
   update(
     @CurrentUser() user: any,
@@ -73,6 +76,7 @@ export class ProductController {
   }
 
   @Patch(':id/status')
+  @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Update product status' })
   updateStatus(
     @CurrentUser() user: any,
@@ -89,6 +93,7 @@ export class ProductController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Soft delete a product' })
   remove(
     @CurrentUser() user: any,

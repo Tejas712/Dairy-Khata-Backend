@@ -1,20 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateDailyEntryDto } from './dto/daily-entry.dto';
-import { Status } from '@prisma/client';
+import { CreateEntryDto } from './dto/create-entry.dto';
+import { EntryType, Status } from '@prisma/client';
 
 @Injectable()
-export class DailyEntryService {
+export class EntryService {
   constructor(private prisma: PrismaService) {}
 
-  async create(companyId: string, dto: CreateDailyEntryDto, actorId: string) {
+  async create(companyId: string, dto: CreateEntryDto, actorId: string) {
     const userId = dto.userId;
     const productId = dto.productId;
 
     let price = dto.price;
 
     if (price === undefined || price === null) {
-      // 1. Get custom price or product price if not provided in DTO
       const userProduct = await this.prisma.userProduct.findFirst({
         where: { companyId, userId, productId, status: Status.ACTIVE },
         include: { product: true },
@@ -30,31 +29,9 @@ export class DailyEntryService {
     }
 
     const amount = price * dto.quantity;
-
-    // 2. Check if already exists for this date
     const entryDate = new Date(dto.entryDate);
-    // const existing = await this.prisma.dailyEntry.findFirst({
-    //   where: {
-    //     companyId,
-    //     userId,
-    //     productId,
-    //     entryDate,
-    //   },
-    // });
 
-    // if (existing) {
-    //   return this.prisma.dailyEntry.update({
-    //     where: { id: existing.id },
-    //     data: {
-    //       quantity: dto.quantity,
-    //       amount,
-    //       price,
-    //       updatedBy: actorId,
-    //     },
-    //   });
-    // }
-
-    return this.prisma.dailyEntry.create({
+    return this.prisma.entry.create({
       data: {
         companyId,
         userId,
@@ -63,6 +40,7 @@ export class DailyEntryService {
         quantity: dto.quantity,
         price,
         amount,
+        type: dto.type ?? EntryType.SALE,
         createdBy: actorId,
         updatedBy: actorId,
       },
@@ -74,16 +52,18 @@ export class DailyEntryService {
     userId?: string,
     startDate?: string,
     endDate?: string,
+    type?: EntryType,
   ) {
     const where: any = { companyId };
     if (userId) where.userId = userId;
+    if (type) where.type = type;
     if (startDate || endDate) {
       where.entryDate = {};
       if (startDate) where.entryDate.gte = new Date(startDate);
       if (endDate) where.entryDate.lte = new Date(endDate);
     }
 
-    return this.prisma.dailyEntry.findMany({
+    return this.prisma.entry.findMany({
       where,
       include: {
         product: true,
@@ -96,7 +76,7 @@ export class DailyEntryService {
   }
 
   async remove(companyId: string, id: string, actorId: string) {
-    const entry = await this.prisma.dailyEntry.findFirst({
+    const entry = await this.prisma.entry.findFirst({
       where: { id, companyId },
     });
 
@@ -105,7 +85,7 @@ export class DailyEntryService {
     }
 
     void actorId;
-    return this.prisma.dailyEntry.delete({
+    return this.prisma.entry.delete({
       where: { id },
     });
   }

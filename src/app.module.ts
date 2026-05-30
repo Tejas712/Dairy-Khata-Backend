@@ -9,7 +9,7 @@ import { CompanyModule } from './company/company.module';
 import { UserModule } from './user/user.module';
 import { ProductModule } from './product/product.module';
 import { UserProductModule } from './user-product/user-product.module';
-import { DailyEntryModule } from './daily-entry/daily-entry.module';
+import { EntryModule } from './entry/entry.module';
 import { UserPaymentModule } from './user-payment/user-payment.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
@@ -28,7 +28,7 @@ import { CompanyContextGuard } from './auth/guards/company-context.guard';
     UserModule,
     ProductModule,
     UserProductModule,
-    DailyEntryModule,
+    EntryModule,
     UserPaymentModule,
     SubscriptionModule,
     WhatsAppModule,

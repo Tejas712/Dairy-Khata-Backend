@@ -18,6 +18,7 @@ enum UserRole {
   OWNER
   STAFF
   CUSTOMER
+  SUPPLIER
 }
 
 enum Status {
@@ -27,6 +28,16 @@ enum Status {
   DELETED
   EXPIRED
   CANCELLED
+}
+
+enum EntryType {
+  SALE
+  PURCHASE
+}
+
+enum PaymentType {
+  CASH_IN
+  CASH_OUT
 }
 
 //////////////////////////////////////////////////////
@@ -49,7 +60,7 @@ model Company {
   users                User[]
   products             Product[]
   userProducts         UserProduct[]
-  dailyEntries         DailyEntry[]
+  entries              Entry[]
   userPayments         UserPayment[]
   subscription         CompanySubscription?
   subscriptionPayments CompanySubscriptionPayment[]
@@ -64,7 +75,7 @@ model User {
   companyId    String
   name         String
   mobile       String
-  customerCode String?
+  code         String?
   email        String?  @unique
   passwordHash String
   role         UserRole
@@ -77,12 +88,12 @@ model User {
 
   company         Company                      @relation(fields: [companyId], references: [id])
   userProducts    UserProduct[]
-  dailyEntries    DailyEntry[]
+  entries         Entry[]
   payments        UserPayment[]
   handledPayments CompanySubscriptionPayment[] @relation("HandledBy")
 
   @@unique([companyId, mobile])
-  @@unique([companyId, customerCode])
+  @@unique([companyId, code])
   @@map("user")
 }
 
@@ -104,7 +115,7 @@ model Product {
 
   company      Company       @relation(fields: [companyId], references: [id])
   userProducts UserProduct[]
-  dailyEntries DailyEntry[]
+  entries      Entry[]
 
   @@unique([companyId, name])
   @@unique([companyId, productCode])
@@ -136,7 +147,7 @@ model UserProduct {
 
 //////////////////////////////////////////////////////
 
-model DailyEntry {
+model Entry {
   id        String   @id @default(uuid())
   companyId String
   userId    String
@@ -144,8 +155,9 @@ model DailyEntry {
   entryDate DateTime @db.Date
   quantity  Decimal  @db.Decimal(10, 2)
   price     Decimal  @db.Decimal(10, 2)
-  amount    Decimal  @db.Decimal(10, 2)
-  status    Status   @default(ACTIVE)
+  amount    Decimal   @db.Decimal(10, 2)
+  type      EntryType @default(SALE)
+  status    Status    @default(ACTIVE)
   createdAt DateTime @default(now())
   updatedAt DateTime? @updatedAt
   createdBy String?
@@ -155,7 +167,7 @@ model DailyEntry {
   user    User    @relation(fields: [userId], references: [id])
   product Product @relation(fields: [productId], references: [id])
 
-  @@map("daily_entry")
+  @@map("entry")
 }
 
 //////////////////////////////////////////////////////
@@ -168,7 +180,8 @@ model UserPayment {
   paymentDate DateTime @db.Date
   paymentMode String
   note        String?
-  status      Status   @default(ACTIVE)
+  type        PaymentType @default(CASH_IN)
+  status      Status      @default(ACTIVE)
   createdAt   DateTime @default(now())
   updatedAt   DateTime? @updatedAt
   createdBy   String?

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserPaymentDto } from './dto/user-payment.dto';
-import { Status } from '@prisma/client';
+import { PaymentType, Status } from '@prisma/client';
 
 @Injectable()
 export class UserPaymentService {
@@ -16,18 +16,20 @@ export class UserPaymentService {
         paymentDate: new Date(dto.paymentDate),
         paymentMode: dto.paymentMode,
         note: dto.note,
+        type: dto.type ?? PaymentType.CASH_IN,
         createdBy: actorId,
         updatedBy: actorId,
       },
     });
   }
 
-  async findAll(companyId: string, userId?: string) {
+  async findAll(companyId: string, userId?: string, type?: PaymentType) {
     return this.prisma.userPayment.findMany({
       where: {
         companyId,
         userId: userId ? userId : undefined,
         status: Status.ACTIVE,
+        type: type ? type : undefined,
       },
       orderBy: { paymentDate: 'desc' },
       include: {

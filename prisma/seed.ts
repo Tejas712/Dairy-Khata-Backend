@@ -69,7 +69,7 @@ async function main() {
       email: 'admin@dairykhata.com',
       passwordHash: hashedPassword,
       role: UserRole.SUPER_ADMIN,
-      customerCode: 'SUP1',
+      code: 'SUP1',
     },
   });
 

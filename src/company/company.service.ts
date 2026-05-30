@@ -286,68 +286,75 @@ export class CompanyService {
   async getStats(companyId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
     const [
-      totalCustomers,
-      todayStats,
-      totalEntries,
-      totalPayments,
+      customerSales,
+      customerPayments,
+      supplierPurchases,
+      supplierPayments,
+      customerReceivedMonth,
+      supplierPaidMonth,
       subscription,
     ] = await Promise.all([
-      // 1. Total Customers
-      this.prisma.user.count({
-        where: { companyId, role: 'CUSTOMER', status: 'ACTIVE' },
+      this.prisma.entry.aggregate({
+        where: { companyId, status: 'ACTIVE', type: 'SALE' },
+        _sum: { amount: true },
       }),
-
-      // 2. Today's Milk
-      this.prisma.dailyEntry.aggregate({
+      this.prisma.userPayment.aggregate({
+        where: { companyId, status: 'ACTIVE', type: 'CASH_IN' },
+        _sum: { amount: true },
+      }),
+      this.prisma.entry.aggregate({
+        where: { companyId, status: 'ACTIVE', type: 'PURCHASE' },
+        _sum: { amount: true },
+      }),
+      this.prisma.userPayment.aggregate({
+        where: { companyId, status: 'ACTIVE', type: 'CASH_OUT' },
+        _sum: { amount: true },
+      }),
+      this.prisma.userPayment.aggregate({
         where: {
           companyId,
-          entryDate: today,
           status: 'ACTIVE',
+          type: 'CASH_IN',
+          paymentDate: { gte: monthStart },
         },
-        _sum: {
-          quantity: true,
-        },
+        _sum: { amount: true },
       }),
-
-      // 3. Total Balance (Entries)
-      this.prisma.dailyEntry.aggregate({
-        where: { companyId, status: 'ACTIVE' },
-        _sum: {
-          amount: true,
-        },
-      }),
-
-      // 4. Total Payments
       this.prisma.userPayment.aggregate({
-        where: { companyId, status: 'ACTIVE' },
-        _sum: {
-          amount: true,
+        where: {
+          companyId,
+          status: 'ACTIVE',
+          type: 'CASH_OUT',
+          paymentDate: { gte: monthStart },
         },
+        _sum: { amount: true },
       }),
-
-      // 5. Subscription
       this.prisma.companySubscription.findUnique({
         where: { companyId },
         include: { plan: true },
       }),
     ]);
 
-    const entrySum = totalEntries._sum.amount?.toNumber() || 0;
-    const paymentSum = totalPayments._sum.amount?.toNumber() || 0;
-    const outstandingBalance = entrySum - paymentSum;
+    const customerPending =
+      (customerSales._sum.amount?.toNumber() ?? 0) -
+      (customerPayments._sum.amount?.toNumber() ?? 0);
+    const supplierPending =
+      (supplierPurchases._sum.amount?.toNumber() ?? 0) -
+      (supplierPayments._sum.amount?.toNumber() ?? 0);
 
     let subscriptionDaysLeft = 0;
-    if (subscription && subscription.endDate) {
-      const diffTime = subscription.endDate.getTime() - new Date().getTime();
+    if (subscription?.endDate) {
+      const diffTime = subscription.endDate.getTime() - Date.now();
       subscriptionDaysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
     return {
-      totalCustomers,
-      todayMilk: todayStats._sum.quantity?.toNumber() || 0,
-      outstandingBalance,
+      customerPending,
+      supplierPending,
+      customerReceivedMonth: customerReceivedMonth._sum.amount?.toNumber() ?? 0,
+      supplierPaidMonth: supplierPaidMonth._sum.amount?.toNumber() ?? 0,
       subscriptionDaysLeft: Math.max(0, subscriptionDaysLeft),
       subscription,
     };

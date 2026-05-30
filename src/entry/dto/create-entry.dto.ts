@@ -1,7 +1,8 @@
-import { IsNotEmpty, IsNumber, IsDateString } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsNumber, IsDateString, IsEnum, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { EntryType } from '@prisma/client';
 
-export class CreateDailyEntryDto {
+export class CreateEntryDto {
   @ApiProperty({ example: '1' })
   @IsNotEmpty()
   userId: string;
@@ -24,4 +25,9 @@ export class CreateDailyEntryDto {
   @IsNotEmpty()
   @IsNumber()
   price: number;
+
+  @ApiPropertyOptional({ enum: EntryType, default: EntryType.SALE })
+  @IsOptional()
+  @IsEnum(EntryType)
+  type?: EntryType;
 }

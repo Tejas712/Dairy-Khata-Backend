@@ -32,7 +32,7 @@ export class UserController {
 
   @Post()
   @Roles(UserRole.OWNER)
-  @ApiOperation({ summary: 'Create a new user (STAFF/CUSTOMER)' })
+  @ApiOperation({ summary: 'Create a new user (STAFF/CUSTOMER/SUPPLIER)' })
   create(
     @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
@@ -50,7 +50,7 @@ export class UserController {
 
   @Get('balance/:id')
   @Roles(UserRole.OWNER, UserRole.STAFF, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Get customer pending balance' })
+  @ApiOperation({ summary: 'Get customer or supplier balance' })
   getBalance(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
     return this.userService.getBalance(companyId, id);
   }
