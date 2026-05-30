@@ -13,6 +13,10 @@ import {
 } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
 import { UserRole, Status, Prisma, User, EntryType, PaymentType } from '@prisma/client';
+import {
+  buildPaginatedResult,
+  resolvePagination,
+} from '../common/utils/pagination.util';
 
 @Injectable()
 export class UserService {
@@ -108,7 +112,8 @@ export class UserService {
   }
 
   async findAll(companyId: string, query: FindUsersDto) {
-    const { role, status, search } = query;
+    const { role, status, search, page, limit } = query;
+    const pagination = resolvePagination({ page, limit });
 
     const where: Prisma.UserWhereInput = {
       companyId,
@@ -130,21 +135,30 @@ export class UserService {
       ];
     }
 
-    return this.prisma.user.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        mobile: true,
-        email: true,
-        role: true,
-        status: true,
-        address: true,
-        code: true,
-        createdAt: true,
-      },
-    });
+    const select = {
+      id: true,
+      name: true,
+      mobile: true,
+      email: true,
+      role: true,
+      status: true,
+      address: true,
+      code: true,
+      createdAt: true,
+    } as const;
+
+    const [total, data] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        select,
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+    ]);
+
+    return buildPaginatedResult(data, total, pagination.page, pagination.limit);
   }
 
   async findOne(companyId: string, id: string) {
@@ -334,7 +348,22 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
-    // Soft delete
+    const [entryCount, assignmentCount, paymentCount] = await Promise.all([
+      this.prisma.entry.count({ where: { companyId, userId: id } }),
+      this.prisma.userProduct.count({ where: { companyId, userId: id } }),
+      this.prisma.userPayment.count({ where: { companyId, userId: id } }),
+    ]);
+
+    if (entryCount > 0 || assignmentCount > 0 || paymentCount > 0) {
+      const blockers: string[] = [];
+      if (entryCount > 0) blockers.push('daily entries');
+      if (assignmentCount > 0) blockers.push('product assignments');
+      if (paymentCount > 0) blockers.push('payments');
+      throw new ConflictException(
+        `Cannot delete this user because they have ${blockers.join(', ')}. Remove those records first or set the user to inactive instead.`,
+      );
+    }
+
     return this.prisma.user.update({
       where: { id },
       data: { status: Status.DELETED, updatedBy: actorId },

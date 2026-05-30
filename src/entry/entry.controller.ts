@@ -10,12 +10,8 @@ import {
 } from '@nestjs/common';
 import { EntryService } from './entry.service';
 import { CreateEntryDto } from './dto/create-entry.dto';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { FindEntriesDto } from './dto/find-entries.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import {
   Roles,
   CurrentCompanyId,
@@ -41,42 +37,25 @@ export class EntryController {
   }
 
   @Get()
-  @Roles(UserRole.OWNER, UserRole.STAFF, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.OWNER, UserRole.STAFF, UserRole.SUPER_ADMIN, UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Get entries' })
-  @ApiQuery({ name: 'userId', required: false })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  @ApiQuery({ name: 'type', required: false, enum: EntryType })
   findAll(
     @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
-    @Query('userId') userId?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('type') type?: EntryType,
+    @Query() query: FindEntriesDto,
   ) {
-    const targetUserId = userId || undefined;
-
     if (user.role === UserRole.CUSTOMER) {
-      if (targetUserId && targetUserId !== String(user.userId)) {
+      if (query.userId && query.userId !== String(user.userId)) {
         throw new ForbiddenException('You can only view your own entries');
       }
-      return this.entryService.findAll(
-        companyId,
-        String(user.userId),
-        startDate,
-        endDate,
-        type ?? EntryType.SALE,
-      );
+      return this.entryService.findAll(companyId, {
+        ...query,
+        userId: String(user.userId),
+        type: query.type ?? EntryType.SALE,
+      });
     }
 
-    return this.entryService.findAll(
-      companyId,
-      targetUserId,
-      startDate,
-      endDate,
-      type,
-    );
+    return this.entryService.findAll(companyId, query);
   }
 
   @Delete(':id')

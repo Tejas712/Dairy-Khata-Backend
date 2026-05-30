@@ -1,5 +1,6 @@
-import { IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
 
 export class AssignProductDto {
   @ApiProperty({ example: '1' })
@@ -22,3 +23,33 @@ export class AssignProductDto {
 }
 
 export class UpdateUserProductDto extends PartialType(AssignProductDto) {}
+
+export class FindUserProductsDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  productId?: string;
+
+  @ApiProperty({ enum: UserRole, required: false })
+  @IsOptional()
+  @IsEnum(UserRole)
+  role?: UserRole;
+
+  @ApiProperty({ required: false, default: 1 })
+  @IsOptional()
+  page?: number;
+
+  @ApiProperty({ required: false, default: 10 })
+  @IsOptional()
+  limit?: number;
+}

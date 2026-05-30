@@ -7,12 +7,14 @@ import {
   Param,
   Delete,
   Put,
+  Query,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import {
   CreateProductDto,
   UpdateProductDto,
   UpdateProductStatusDto,
+  FindProductsDto,
 } from './dto/product.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import {
@@ -46,8 +48,11 @@ export class ProductController {
   @Get()
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiOperation({ summary: 'List all products' })
-  findAll(@CurrentCompanyId() companyId: string) {
-    return this.productService.findAll(companyId);
+  findAll(
+    @CurrentCompanyId() companyId: string,
+    @Query() query: FindProductsDto,
+  ) {
+    return this.productService.findAll(companyId, query);
   }
 
   @Get(':id')

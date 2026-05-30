@@ -1,7 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEntryDto } from './dto/create-entry.dto';
-import { EntryType, Status } from '@prisma/client';
+import { FindEntriesDto } from './dto/find-entries.dto';
+import { EntryType, Prisma, Status } from '@prisma/client';
+import {
+  buildPaginatedResult,
+  resolvePagination,
+} from '../common/utils/pagination.util';
 
 @Injectable()
 export class EntryService {
@@ -47,32 +52,60 @@ export class EntryService {
     });
   }
 
-  async findAll(
-    companyId: string,
-    userId?: string,
-    startDate?: string,
-    endDate?: string,
-    type?: EntryType,
-  ) {
-    const where: any = { companyId };
+  async findAll(companyId: string, query: FindEntriesDto = {}) {
+    const {
+      userId,
+      productId,
+      search,
+      startDate,
+      endDate,
+      type,
+      page,
+      limit,
+    } = query;
+    const pagination = resolvePagination({ page, limit });
+
+    const where: Prisma.EntryWhereInput = {
+      companyId,
+      status: Status.ACTIVE,
+    };
+
     if (userId) where.userId = userId;
+    if (productId) where.productId = productId;
     if (type) where.type = type;
+
     if (startDate || endDate) {
       where.entryDate = {};
       if (startDate) where.entryDate.gte = new Date(startDate);
       if (endDate) where.entryDate.lte = new Date(endDate);
     }
 
-    return this.prisma.entry.findMany({
-      where,
-      include: {
-        product: true,
-        user: {
-          select: { name: true, mobile: true },
-        },
+    if (search?.trim()) {
+      where.OR = [
+        { user: { name: { contains: search.trim(), mode: 'insensitive' } } },
+        { product: { name: { contains: search.trim(), mode: 'insensitive' } } },
+      ];
+    }
+
+    const include = {
+      product: true,
+      user: {
+        select: { name: true, mobile: true },
       },
-      orderBy: { entryDate: 'desc' },
-    });
+    } as const;
+
+    const [total, data] = await Promise.all([
+      this.prisma.entry.count({ where }),
+      this.prisma.entry.findMany({
+        where,
+        include,
+        orderBy: { entryDate: 'desc' },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+    ]);
+
+    return buildPaginatedResult(data, total, pagination.page, pagination.limit);
   }
 
   async remove(companyId: string, id: string, actorId: string) {

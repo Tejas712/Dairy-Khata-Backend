@@ -42,3 +42,28 @@ export class UpdateProductStatusDto {
 }
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {}
+
+export class FindProductsDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiProperty({ enum: Status, required: false })
+  @IsOptional()
+  @IsEnum(Status)
+  status?: Status;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  unit?: string;
+
+  @ApiProperty({ required: false, default: 1 })
+  @IsOptional()
+  page?: number;
+
+  @ApiProperty({ required: false, default: 10 })
+  @IsOptional()
+  limit?: number;
+}

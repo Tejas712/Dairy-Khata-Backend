@@ -8,8 +8,13 @@ import {
   CreateProductDto,
   UpdateProductDto,
   UpdateProductStatusDto,
+  FindProductsDto,
 } from './dto/product.dto';
-import { Status } from '@prisma/client';
+import { Status, Prisma } from '@prisma/client';
+import {
+  buildPaginatedResult,
+  resolvePagination,
+} from '../common/utils/pagination.util';
 
 @Injectable()
 export class ProductService {
@@ -58,11 +63,42 @@ export class ProductService {
     });
   }
 
-  async findAll(companyId: string) {
-    return this.prisma.product.findMany({
-      where: { companyId, status: { not: Status.DELETED } },
-      orderBy: { name: 'asc' },
-    });
+  async findAll(companyId: string, query: FindProductsDto = {}) {
+    const { search, status, unit, page, limit } = query;
+    const pagination = resolvePagination({ page, limit });
+
+    const where: Prisma.ProductWhereInput = {
+      companyId,
+      status: { not: Status.DELETED },
+    };
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (unit) {
+      where.unit = unit;
+    }
+
+    if (search?.trim()) {
+      where.OR = [
+        { name: { contains: search.trim(), mode: 'insensitive' } },
+        { productCode: { contains: search.trim(), mode: 'insensitive' } },
+        { description: { contains: search.trim(), mode: 'insensitive' } },
+      ];
+    }
+
+    const [total, data] = await Promise.all([
+      this.prisma.product.count({ where }),
+      this.prisma.product.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+    ]);
+
+    return buildPaginatedResult(data, total, pagination.page, pagination.limit);
   }
 
   async findOne(companyId: string, id: string) {
@@ -124,6 +160,21 @@ export class ProductService {
 
   async remove(companyId: string, id: string, actorId: string) {
     await this.findOne(companyId, id);
+
+    const [entryCount, assignmentCount] = await Promise.all([
+      this.prisma.entry.count({ where: { companyId, productId: id } }),
+      this.prisma.userProduct.count({ where: { companyId, productId: id } }),
+    ]);
+
+    if (entryCount > 0 || assignmentCount > 0) {
+      const blockers: string[] = [];
+      if (entryCount > 0) blockers.push('daily entries');
+      if (assignmentCount > 0) blockers.push('customer assignments');
+      throw new ConflictException(
+        `Cannot delete this product because it has ${blockers.join(' and ')}. Remove those records first or set the product to inactive instead.`,
+      );
+    }
+
     return this.prisma.product.update({
       where: { id },
       data: { status: Status.DELETED, updatedBy: actorId },

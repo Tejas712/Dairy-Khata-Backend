@@ -65,6 +65,14 @@ export class FindUsersDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiProperty({ required: false, default: 1 })
+  @IsOptional()
+  page?: number;
+
+  @ApiProperty({ required: false, default: 10 })
+  @IsOptional()
+  limit?: number;
 }
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {}

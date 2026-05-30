@@ -9,13 +9,8 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { UserPaymentService } from './user-payment.service';
-import { CreateUserPaymentDto } from './dto/user-payment.dto';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { CreateUserPaymentDto, FindPaymentsDto } from './dto/user-payment.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import {
   Roles,
   CurrentCompanyId,
@@ -42,28 +37,23 @@ export class UserPaymentController {
 
   @Get()
   @ApiOperation({ summary: 'List user payments' })
-  @ApiQuery({ name: 'userId', required: false })
-  @ApiQuery({ name: 'type', required: false, enum: PaymentType })
   findAll(
     @CurrentUser() user: any,
     @CurrentCompanyId() companyId: string,
-    @Query('userId') userId?: string,
-    @Query('type') type?: PaymentType,
+    @Query() query: FindPaymentsDto,
   ) {
-    const targetUserId = userId || undefined;
-
     if (user.role === UserRole.CUSTOMER) {
-      if (targetUserId && targetUserId !== String(user.userId)) {
+      if (query.userId && query.userId !== String(user.userId)) {
         throw new ForbiddenException('You can only view your own payments');
       }
-      return this.userPaymentService.findAll(
-        companyId,
-        String(user.userId),
-        type ?? PaymentType.CASH_IN,
-      );
+      return this.userPaymentService.findAll(companyId, {
+        ...query,
+        userId: String(user.userId),
+        type: query.type ?? PaymentType.CASH_IN,
+      });
     }
 
-    return this.userPaymentService.findAll(companyId, targetUserId, type);
+    return this.userPaymentService.findAll(companyId, query);
   }
 
   @Delete(':id')

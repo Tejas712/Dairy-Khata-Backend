@@ -4,7 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AssignProductDto, UpdateUserProductDto } from './dto/user-product.dto';
+import {
+  AssignProductDto,
+  FindUserProductsDto,
+  UpdateUserProductDto,
+} from './dto/user-product.dto';
+import { Prisma } from '@prisma/client';
+import {
+  buildPaginatedResult,
+  resolvePagination,
+} from '../common/utils/pagination.util';
 
 @Injectable()
 export class UserProductService {
@@ -41,44 +50,62 @@ export class UserProductService {
     });
   }
 
-  async findAll(companyId: string, userId?: string, search?: string) {
-    const normalizedSearch = search?.trim().toLowerCase();
+  async findAll(companyId: string, query: FindUserProductsDto = {}) {
+    const { userId, search, productId, role, page, limit } = query;
+    const pagination = resolvePagination({ page, limit });
+    const normalizedSearch = search?.trim();
 
-    const assignments = await this.prisma.userProduct.findMany({
-      where: {
-        companyId,
-        userId: userId ? userId : undefined,
+    const where: Prisma.UserProductWhereInput = {
+      companyId,
+      status: 'ACTIVE',
+      userId: userId || undefined,
+      productId: productId || undefined,
+      user: {
         status: 'ACTIVE',
-        user: {
-          status: 'ACTIVE',
-          ...(normalizedSearch
-            ? {
-                name: {
-                  contains: normalizedSearch,
-                  mode: 'insensitive',
-                },
-              }
-            : {}),
-        },
-        product: {
-          status: 'ACTIVE',
-        },
+        role: role || undefined,
+        ...(normalizedSearch
+          ? {
+              name: {
+                contains: normalizedSearch,
+                mode: 'insensitive',
+              },
+            }
+          : {}),
       },
-      include: {
-        product: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            role: true,
-          },
-        },
+      product: {
+        status: 'ACTIVE',
       },
-      orderBy: [{ user: { name: 'asc' } }, { product: { name: 'asc' } }],
-    });
+    };
 
-    return assignments;
+    const include = {
+      product: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          role: true,
+        },
+      },
+    } as const;
+
+    const [total, assignments] = await Promise.all([
+      this.prisma.userProduct.count({ where }),
+      this.prisma.userProduct.findMany({
+        where,
+        include,
+        orderBy: [{ user: { name: 'asc' } }, { product: { name: 'asc' } }],
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+    ]);
+
+    return buildPaginatedResult(
+      assignments,
+      total,
+      pagination.page,
+      pagination.limit,
+    );
   }
 
   async update(

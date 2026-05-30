@@ -10,7 +10,7 @@ import {
   Put,
 } from '@nestjs/common';
 import { UserProductService } from './user-product.service';
-import { AssignProductDto, UpdateUserProductDto } from './dto/user-product.dto';
+import { AssignProductDto, FindUserProductsDto, UpdateUserProductDto } from './dto/user-product.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -48,14 +48,9 @@ export class UserProductController {
   @ApiQuery({ name: 'search', required: false })
   findAll(
     @CurrentCompanyId() companyId: string,
-    @Query('userId') userId?: string,
-    @Query('search') search?: string,
+    @Query() query: FindUserProductsDto,
   ) {
-    return this.userProductService.findAll(
-      companyId,
-      userId || undefined,
-      search || undefined,
-    );
+    return this.userProductService.findAll(companyId, query);
   }
 
   @Patch(':id')
