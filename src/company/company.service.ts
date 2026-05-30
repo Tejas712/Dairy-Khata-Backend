@@ -105,7 +105,7 @@ export class CompanyService {
           price: 0,
           durationDays: 30,
           maxCustomers: 10,
-          maxAdmins: 1,
+          maxStaff: 1,
           status: 'ACTIVE',
           description: 'Default Free Plan',
           createdBy: actorId ?? 'SYSTEM',
@@ -193,6 +193,94 @@ export class CompanyService {
       where: { companyId: id },
       orderBy: { name: 'asc' },
     });
+  }
+
+  async getSubscriptionDetails(companyId: string) {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: {
+        id: true,
+        name: true,
+        companyCode: true,
+        ownerName: true,
+        mobile: true,
+        status: true,
+      },
+    });
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+
+    const subscription = await this.prisma.companySubscription.findUnique({
+      where: { companyId },
+      include: { plan: true },
+    });
+
+    const [activeCustomers, activeStaff, payments] = await Promise.all([
+      this.prisma.user.count({
+        where: { companyId, role: 'CUSTOMER', status: 'ACTIVE' },
+      }),
+      this.prisma.user.count({
+        where: { companyId, role: 'STAFF', status: 'ACTIVE' },
+      }),
+      this.prisma.companySubscriptionPayment.findMany({
+        where: { companyId, status: 'ACTIVE' },
+        orderBy: { paymentDate: 'desc' },
+        include: { plan: { select: { name: true } } },
+      }),
+    ]);
+
+    const now = new Date();
+    let daysLeft = 0;
+    let isExpired = true;
+
+    if (subscription?.endDate) {
+      const diffTime = subscription.endDate.getTime() - now.getTime();
+      daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      isExpired = diffTime < 0 || subscription.status !== 'ACTIVE';
+    }
+
+    const plan = subscription?.plan
+      ? {
+          ...subscription.plan,
+          price: subscription.plan.price.toNumber(),
+        }
+      : null;
+
+    return {
+      company,
+      subscription: subscription
+        ? {
+            id: subscription.id,
+            companyId: subscription.companyId,
+            planId: subscription.planId,
+            startDate: subscription.startDate,
+            endDate: subscription.endDate,
+            status: subscription.status,
+            createdAt: subscription.createdAt,
+          }
+        : null,
+      plan,
+      daysLeft,
+      isExpired,
+      usage: {
+        activeCustomers,
+        maxCustomers: plan?.maxCustomers ?? 0,
+        activeStaff,
+        maxStaff: plan?.maxStaff ?? 0,
+      },
+      payments: payments.map((payment) => ({
+        id: payment.id,
+        companyId: payment.companyId,
+        planId: payment.planId,
+        amount: payment.amount.toNumber(),
+        paymentDate: payment.paymentDate,
+        paymentMode: payment.paymentMode,
+        reference: payment.reference,
+        status: payment.status,
+        plan: payment.plan,
+      })),
+    };
   }
 
   async getStats(companyId: string) {

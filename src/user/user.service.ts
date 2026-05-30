@@ -57,7 +57,7 @@ export class UserService {
     });
 
     if (plan) {
-      const { maxCustomers, maxAdmins } = plan.plan;
+      const { maxCustomers, maxStaff } = plan.plan;
       const counts = await this.prisma.user.groupBy({
         by: ['role'],
         where: { companyId, status: Status.ACTIVE },
@@ -68,8 +68,6 @@ export class UserService {
         counts.find((c) => c.role === UserRole.CUSTOMER)?._count ?? 0;
       const staffCount =
         counts.find((c) => c.role === UserRole.STAFF)?._count ?? 0;
-      const ownerCount =
-        counts.find((c) => c.role === UserRole.OWNER)?._count ?? 0;
 
       if (
         createUserDto.role === UserRole.CUSTOMER &&
@@ -79,13 +77,9 @@ export class UserService {
           'Maximum customers limit reached for this plan',
         );
       }
-      if (
-        (createUserDto.role === UserRole.STAFF ||
-          createUserDto.role === UserRole.OWNER) &&
-        staffCount + ownerCount >= maxAdmins
-      ) {
+      if (createUserDto.role === UserRole.STAFF && staffCount >= maxStaff) {
         throw new ForbiddenException(
-          'Maximum staff/admin limit reached for this plan',
+          'Maximum staff limit reached for this plan',
         );
       }
     }

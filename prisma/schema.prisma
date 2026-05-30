@@ -188,7 +188,7 @@ model SubscriptionPlan {
   price        Decimal  @db.Decimal(10, 2)
   durationDays Int
   maxCustomers Int
-  maxAdmins    Int      @default(1)
+  maxStaff     Int      @default(1)
   description  String?
   status       Status   @default(ACTIVE)
   createdAt    DateTime @default(now())

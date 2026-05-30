@@ -41,7 +41,7 @@ async function main() {
         price: 0,
         durationDays: 30,
         maxCustomers: 10,
-        maxAdmins: 1,
+        maxStaff: 1,
         description: 'Default free plan',
         status: Status.ACTIVE,
       },
