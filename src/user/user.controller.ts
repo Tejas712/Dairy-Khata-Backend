@@ -56,7 +56,7 @@ export class UserController {
   }
 
   @Get(':id')
-  @Roles(UserRole.OWNER, UserRole.STAFF)
+  @Roles(UserRole.OWNER, UserRole.STAFF, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get user details' })
   findOne(@CurrentCompanyId() companyId: string, @Param('id') id: string) {
     return this.userService.findOne(companyId, id);
