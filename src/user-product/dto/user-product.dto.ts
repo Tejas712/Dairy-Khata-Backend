@@ -1,14 +1,24 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export class AssignProductDto {
   @ApiProperty({ example: '1' })
   @IsNotEmpty()
+  @IsUUID()
   userId: string;
 
   @ApiProperty({ example: '1' })
   @IsNotEmpty()
+  @IsUUID()
   productId: string;
 
   @ApiProperty({ example: 1.0 })
@@ -24,7 +34,7 @@ export class AssignProductDto {
 
 export class UpdateUserProductDto extends PartialType(AssignProductDto) {}
 
-export class FindUserProductsDto {
+export class FindUserProductsDto extends PaginationQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
@@ -44,12 +54,4 @@ export class FindUserProductsDto {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
-
-  @ApiProperty({ required: false, default: 1 })
-  @IsOptional()
-  page?: number;
-
-  @ApiProperty({ required: false, default: 10 })
-  @IsOptional()
-  limit?: number;
 }

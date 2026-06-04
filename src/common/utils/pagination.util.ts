@@ -13,10 +13,7 @@ export interface PaginationParams {
 
 export function resolvePagination(params: PaginationParams = {}) {
   const page = Math.max(1, parseInt(String(params.page ?? 1), 10) || 1);
-  const limit = Math.min(
-    100,
-    Math.max(1, parseInt(String(params.limit ?? 10), 10) || 10),
-  );
+  const limit = Math.max(1, parseInt(String(params.limit ?? 10), 10) || 10);
 
   return {
     page,

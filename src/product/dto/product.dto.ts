@@ -1,12 +1,13 @@
 import {
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  IsEnum,
 } from 'class-validator';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Status } from '@prisma/client';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'Milk' })
@@ -43,7 +44,7 @@ export class UpdateProductStatusDto {
 
 export class UpdateProductDto extends PartialType(CreateProductDto) {}
 
-export class FindProductsDto {
+export class FindProductsDto extends PaginationQueryDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
@@ -58,12 +59,4 @@ export class FindProductsDto {
   @IsOptional()
   @IsString()
   unit?: string;
-
-  @ApiProperty({ required: false, default: 1 })
-  @IsOptional()
-  page?: number;
-
-  @ApiProperty({ required: false, default: 10 })
-  @IsOptional()
-  limit?: number;
 }

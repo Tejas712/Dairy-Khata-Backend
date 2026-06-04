@@ -2,7 +2,9 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
+import { Status } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateCompanyWithAdminDto,
@@ -149,7 +151,15 @@ export class CompanyService {
     updateStatusDto: UpdateCompanyStatusDto,
     actorId: string,
   ) {
-    await this.findOne(id);
+    const company = await this.findOne(id);
+
+    if (
+      company.status === Status.DELETED &&
+      updateStatusDto.status !== Status.DELETED
+    ) {
+      throw new BadRequestException('Cannot change status of a deleted company');
+    }
+
     return this.prisma.company.update({
       where: { id },
       data: { status: updateStatusDto.status, updatedBy: actorId },

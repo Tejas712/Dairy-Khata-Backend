@@ -1,16 +1,16 @@
 import {
-  Injectable,
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Injectable,
 } from '@nestjs/common';
-import { SubscriptionService } from '../../subscription/subscription.service';
-import { UserRole, Status } from '@prisma/client';
+import { Status, UserRole } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 import { isReadOnlyHttpMethod } from '../../common/company-access/company-access.constants';
 
 @Injectable()
-export class SubscriptionGuard implements CanActivate {
-  constructor(private subscriptionService: SubscriptionService) {}
+export class CompanyStatusGuard implements CanActivate {
+  constructor(private prisma: PrismaService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -21,17 +21,15 @@ export class SubscriptionGuard implements CanActivate {
     }
 
     const companyId = String(request.companyContextId ?? user.companyId);
-    const subscription =
-      await this.subscriptionService.findCompanySubscription(companyId);
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { status: true },
+    });
 
-    if (
-      !subscription ||
-      subscription.status !== Status.ACTIVE ||
-      new Date() > subscription.endDate
-    ) {
+    if (!company || company.status !== Status.ACTIVE) {
       if (!isReadOnlyHttpMethod(request.method)) {
         throw new ForbiddenException(
-          'Subscription expired or inactive. System is in READ-ONLY mode.',
+          'Company is not active. System is in READ-ONLY mode.',
         );
       }
     }

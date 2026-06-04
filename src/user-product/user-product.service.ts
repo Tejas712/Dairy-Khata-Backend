@@ -14,12 +14,17 @@ import {
   buildPaginatedResult,
   resolvePagination,
 } from '../common/utils/pagination.util';
+import { CompanyAccessService } from '../common/company-access/company-access.service';
 
 @Injectable()
 export class UserProductService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private companyAccess: CompanyAccessService,
+  ) {}
 
   async assign(companyId: string, dto: AssignProductDto, actorId: string) {
+    await this.companyAccess.assertWritable(companyId);
     const userId = dto.userId;
     const productId = dto.productId;
 
@@ -114,6 +119,7 @@ export class UserProductService {
     dto: UpdateUserProductDto,
     actorId: string,
   ) {
+    await this.companyAccess.assertWritable(companyId);
     const userProduct = await this.prisma.userProduct.findFirst({
       where: { id, companyId },
     });
@@ -133,6 +139,7 @@ export class UserProductService {
   }
 
   async remove(companyId: string, id: string, actorId: string) {
+    await this.companyAccess.assertWritable(companyId);
     const userProduct = await this.prisma.userProduct.findFirst({
       where: { id, companyId },
     });

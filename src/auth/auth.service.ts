@@ -21,8 +21,12 @@ export class AuthService {
       where: { companyCode: loginDto.companyCode },
     });
 
-    if (!company || company.status !== Status.ACTIVE) {
-      throw new UnauthorizedException('Invalid company or company is inactive');
+    if (!company) {
+      throw new UnauthorizedException('Invalid company code');
+    }
+
+    if (company.status === Status.DELETED) {
+      throw new UnauthorizedException('Company is deleted');
     }
 
     const user = await this.prisma.user.findFirst({

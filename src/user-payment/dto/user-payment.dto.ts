@@ -5,13 +5,16 @@ import {
   IsDateString,
   IsOptional,
   IsEnum,
+  IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaymentType } from '@prisma/client';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export class CreateUserPaymentDto {
   @ApiProperty({ example: '1' })
   @IsNotEmpty()
+  @IsUUID()
   userId: string;
 
   @ApiProperty({ example: 500.0 })
@@ -40,7 +43,7 @@ export class CreateUserPaymentDto {
   type?: PaymentType;
 }
 
-export class FindPaymentsDto {
+export class FindPaymentsDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -70,12 +73,4 @@ export class FindPaymentsDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
-
-  @ApiPropertyOptional({ default: 1 })
-  @IsOptional()
-  page?: number;
-
-  @ApiPropertyOptional({ default: 10 })
-  @IsOptional()
-  limit?: number;
 }

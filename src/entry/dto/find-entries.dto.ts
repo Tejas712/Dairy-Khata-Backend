@@ -1,8 +1,9 @@
 import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { EntryType } from '@prisma/client';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
-export class FindEntriesDto {
+export class FindEntriesDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -32,12 +33,4 @@ export class FindEntriesDto {
   @IsOptional()
   @IsEnum(EntryType)
   type?: EntryType;
-
-  @ApiPropertyOptional({ default: 1 })
-  @IsOptional()
-  page?: number;
-
-  @ApiPropertyOptional({ default: 10 })
-  @IsOptional()
-  limit?: number;
 }

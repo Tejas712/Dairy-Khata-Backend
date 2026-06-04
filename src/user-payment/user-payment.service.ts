@@ -6,12 +6,17 @@ import {
   buildPaginatedResult,
   resolvePagination,
 } from '../common/utils/pagination.util';
+import { CompanyAccessService } from '../common/company-access/company-access.service';
 
 @Injectable()
 export class UserPaymentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private companyAccess: CompanyAccessService,
+  ) {}
 
   async create(companyId: string, dto: CreateUserPaymentDto, actorId: string) {
+    await this.companyAccess.assertWritable(companyId);
     return this.prisma.userPayment.create({
       data: {
         companyId,
@@ -84,6 +89,7 @@ export class UserPaymentService {
   }
 
   async remove(companyId: string, id: string, actorId: string) {
+    await this.companyAccess.assertWritable(companyId);
     const payment = await this.prisma.userPayment.findFirst({
       where: { id, companyId },
     });

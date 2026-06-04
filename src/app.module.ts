@@ -16,6 +16,7 @@ import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { SubscriptionGuard } from './auth/guards/subscription.guard';
+import { CompanyStatusGuard } from './auth/guards/company-status.guard';
 import { CompanyContextGuard } from './auth/guards/company-context.guard';
 @Module({
   imports: [
@@ -40,7 +41,7 @@ import { CompanyContextGuard } from './auth/guards/company-context.guard';
       provide: APP_PIPE,
       useValue: new ValidationPipe({
         whitelist: true,
-        forbidNonWhitelisted: true,
+        forbidNonWhitelisted: false,
         transform: true,
       }),
     },
@@ -55,6 +56,10 @@ import { CompanyContextGuard } from './auth/guards/company-context.guard';
     {
       provide: APP_GUARD,
       useClass: SubscriptionGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CompanyStatusGuard,
     },
     {
       provide: APP_GUARD,

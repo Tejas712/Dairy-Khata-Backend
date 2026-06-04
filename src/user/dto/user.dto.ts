@@ -7,6 +7,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { UserRole, Status } from '@prisma/client';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'John Staff' })
@@ -50,7 +51,7 @@ export class UpdateUserStatusDto {
   status: Status;
 }
 
-export class FindUsersDto {
+export class FindUsersDto extends PaginationQueryDto {
   @ApiProperty({ enum: UserRole, required: false })
   @IsOptional()
   @IsEnum(UserRole)
@@ -65,14 +66,6 @@ export class FindUsersDto {
   @IsOptional()
   @IsString()
   search?: string;
-
-  @ApiProperty({ required: false, default: 1 })
-  @IsOptional()
-  page?: number;
-
-  @ApiProperty({ required: false, default: 10 })
-  @IsOptional()
-  limit?: number;
 }
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {}
