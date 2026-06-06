@@ -80,8 +80,9 @@ export class UserPaymentService {
         where,
         orderBy: { paymentDate: 'desc' },
         include,
-        skip: pagination.skip,
-        take: pagination.take,
+        ...(pagination.limit !== null
+          ? { skip: pagination.skip!, take: pagination.take! }
+          : {}),
       }),
     ]);
 

@@ -153,8 +153,9 @@ export class UserService {
         where,
         orderBy: { createdAt: 'desc' },
         select,
-        skip: pagination.skip,
-        take: pagination.take,
+        ...(pagination.limit !== null
+          ? { skip: pagination.skip!, take: pagination.take! }
+          : {}),
       }),
     ]);
 

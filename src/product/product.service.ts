@@ -93,8 +93,9 @@ export class ProductService {
       this.prisma.product.findMany({
         where,
         orderBy: { name: 'asc' },
-        skip: pagination.skip,
-        take: pagination.take,
+        ...(pagination.limit !== null
+          ? { skip: pagination.skip!, take: pagination.take! }
+          : {}),
       }),
     ]);
 

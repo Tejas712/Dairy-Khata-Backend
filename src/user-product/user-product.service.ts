@@ -100,8 +100,9 @@ export class UserProductService {
         where,
         include,
         orderBy: [{ user: { name: 'asc' } }, { product: { name: 'asc' } }],
-        skip: pagination.skip,
-        take: pagination.take,
+        ...(pagination.limit !== null
+          ? { skip: pagination.skip!, take: pagination.take! }
+          : {}),
       }),
     ]);
 

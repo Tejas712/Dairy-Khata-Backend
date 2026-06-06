@@ -100,8 +100,9 @@ export class EntryService {
         where,
         include,
         orderBy: { entryDate: 'desc' },
-        skip: pagination.skip,
-        take: pagination.take,
+        ...(pagination.limit !== null
+          ? { skip: pagination.skip!, take: pagination.take! }
+          : {}),
       }),
     ]);
 

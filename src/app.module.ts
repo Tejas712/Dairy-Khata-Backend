@@ -13,6 +13,7 @@ import { EntryModule } from './entry/entry.module';
 import { UserPaymentModule } from './user-payment/user-payment.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
+import { ReportModule } from './report/report.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { SubscriptionGuard } from './auth/guards/subscription.guard';
@@ -33,6 +34,7 @@ import { CompanyContextGuard } from './auth/guards/company-context.guard';
     UserPaymentModule,
     SubscriptionModule,
     WhatsAppModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [

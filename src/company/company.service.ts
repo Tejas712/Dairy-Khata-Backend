@@ -214,6 +214,7 @@ export class CompanyService {
         companyCode: true,
         ownerName: true,
         mobile: true,
+        address: true,
         status: true,
       },
     });
